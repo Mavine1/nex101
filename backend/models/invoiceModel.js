@@ -14,7 +14,7 @@
       phone: { type: String, default: "" },
     },
 
-    currency: { type: String, default: "INR" },
+    currency: { type: String, default: "KSH" },
     status: { type: String, enum: ["draft", "unpaid", "paid", "overdue"], default: "draft" },
 
     logoDataUrl: { type: String, default: null },
