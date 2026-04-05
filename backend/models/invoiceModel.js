@@ -1,5 +1,51 @@
+import mongoose from "mongoose";
 
-    //Business info
+const itemSchema = new mongoose.Schema({
+    id: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    qty: {
+        type: Number,
+        required: true,
+        default: 1
+    },
+    unitPrice: {
+        type: Number,
+        required: true,
+        default: 0
+    }
+});
+
+// the invoice schema
+const invoiceSchema = new mongoose.Schema({
+    owner: {
+        type: String,
+        required: true,
+        index: true
+    }, // it is clerk id
+    // it must be unique for each invoice
+    invoiceNumber: {
+        type: String,
+        required: true,
+        index: true
+    },
+    issueDate: {
+        type: String,
+        required: true
+    },
+    dueDate: {
+        type: String,
+        required: true
+    },
+
+    items: [itemSchema],
+
+    // Business info
     fromBusinessName: { type: String, default: "" },
     fromEmail: { type: String, default: "" },
     fromAddress: { type: String, default: "" },
@@ -8,14 +54,18 @@
 
     // Client info
     client: {
-      name: { type: String, default: "" },
-      email: { type: String, default: "" },
-      address: { type: String, default: "" },
-      phone: { type: String, default: "" },
+        name: { type: String, default: "" },
+        email: { type: String, default: "" },
+        address: { type: String, default: "" },
+        phone: { type: String, default: "" }
     },
 
     currency: { type: String, default: "KSH" },
-    status: { type: String, enum: ["draft", "unpaid", "paid", "overdue"], default: "draft" },
+    status: { 
+        type: String, 
+        enum: ["draft", "unpaid", "paid", "overdue"], 
+        default: "draft" 
+    },
 
     logoDataUrl: { type: String, default: null },
     stampDataUrl: { type: String, default: null },
@@ -28,4 +78,10 @@
 
     subtotal: { type: Number, default: 0 },
     tax: { type: Number, default: 0 },
-    total: { type: Number, default: 0 },
+    total: { type: Number, default: 0 }
+}, {
+    timestamps: true
+});
+
+const Invoice = mongoose.models.Invoice || mongoose.model("Invoice", invoiceSchema);
+export default Invoice;
