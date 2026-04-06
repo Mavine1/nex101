@@ -1,3 +1,8 @@
+import { getAuth } from '@clerk/express';
+import BusinessProfile from '../models/BusinessProfile.js';
+
+const API_BASE = process.env.API_BASE || 'http://localhost:4000';
+
 function uploadedFilesToUrls(req) {
   const urls = {};
   if (!req.files) return urls;
@@ -13,8 +18,18 @@ function uploadedFilesToUrls(req) {
   return urls;
 }
 
+// CREATE BUSINESS PROFILE
+export async function createBusinessProfile(req, res) {
+  try {
+    const { userId } = getAuth(req);
 
-  //  CREATE BUSINESS PROFILE
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required." });
+    }
+
+    const body = req.body || {};
+    const fileUrls = uploadedFilesToUrls(req);
+
     const profile = new BusinessProfile({
       owner: userId,
       businessName: body.businessName || "ABC Solutions",
@@ -27,12 +42,45 @@ function uploadedFilesToUrls(req) {
       signatureUrl: fileUrls.signatureUrl || body.signatureUrl || null,
       signatureOwnerName: body.signatureOwnerName || "",
       signatureOwnerTitle: body.signatureOwnerTitle || "",
-      defaultTaxPercent:
-        body.defaultTaxPercent !== undefined ? Number(body.defaultTaxPercent) : 18,
+      defaultTaxPercent: body.defaultTaxPercent !== undefined ? Number(body.defaultTaxPercent) : 18,
     });
 
+    const saved = await profile.save();
+    return res.status(201).json({
+      success: true,
+      data: saved,
+      message: "Business Profile Created."
+    });
 
-   //UPDATE BUSINESS PROFILE
+  } catch (error) {
+    console.log("CreateBusinessProfile error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+}
+
+// UPDATE BUSINESS PROFILE
+export async function updateBusinessProfile(req, res) {
+  try {
+    const { userId } = getAuth(req);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required." });
+    }
+
+    const { id } = req.params;
+    const body = req.body || {};
+    const fileUrls = uploadedFilesToUrls(req);
+
+    const existing = await BusinessProfile.findOne({ _id: id, owner: userId });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Business profile not found." });
+    }
+
+    const update = {};
+
     if (body.businessName !== undefined) update.businessName = body.businessName;
     if (body.email !== undefined) update.email = body.email;
     if (body.address !== undefined) update.address = body.address;
@@ -51,3 +99,56 @@ function uploadedFilesToUrls(req) {
     if (body.signatureOwnerName !== undefined) update.signatureOwnerName = body.signatureOwnerName;
     if (body.signatureOwnerTitle !== undefined) update.signatureOwnerTitle = body.signatureOwnerTitle;
     if (body.defaultTaxPercent !== undefined) update.defaultTaxPercent = Number(body.defaultTaxPercent);
+
+    const updated = await BusinessProfile.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: updated,
+      message: "Business Profile Updated."
+    });
+
+  } catch (error) {
+    console.log("UpdateBusinessProfile error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+}
+
+// GET MY BUSINESS PROFILE
+export async function getMyBusinessProfile(req, res) {
+  try {
+    const { userId } = getAuth(req);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required." });
+    }
+
+    const profile = await BusinessProfile.findOne({ owner: userId }).lean();
+    
+    if (!profile) {
+      return res.status(204).json({
+        success: true,
+        message: "No profile found",
+        data: null
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: profile
+    });
+
+  } catch (error) {
+    console.log("GetMyBusinessProfile error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+}
