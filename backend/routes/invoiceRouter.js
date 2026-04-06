@@ -5,7 +5,7 @@ import {
   createInvoice, 
   updateInvoice, 
   deleteInvoice 
-} from './controllers/invoiceController.js';
+} from '../controllers/invoiceController.js';  // Added one dot (../)
 
 const invoiceRouter = express.Router();
 
