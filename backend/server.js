@@ -8,15 +8,6 @@ import invoiceRouter from './routes/invoiceRouter.js';
 import businessProfileRouter from './routes/businessProfileRouter.js';
 import aiInvoiceRouter from './routes/aiInvoiceRouter.js';
 
-// DEBUGGING: Check if .env is loading
-console.log('=== ENVIRONMENT VARIABLES CHECK ===');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('MONGODB_URI exists?', !!process.env.MONGODB_URI);
-console.log('MONGODB_URI value:', process.env.MONGODB_URI);
-console.log('GEMINI_API_KEY exists?', !!process.env.GEMINI_API_KEY);
-console.log('CLERK_SECRET_KEY exists?', !!process.env.CLERK_SECRET_KEY);
-console.log('===================================');
-
 const app = express();
 const port = 4000;
 
