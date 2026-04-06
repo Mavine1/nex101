@@ -1,5 +1,5 @@
 import { getAuth } from '@clerk/express';
-import BusinessProfile from '../models/BusinessProfile.js';
+import BusinessProfile from '../models/BusinessProfileModel.js';
 
 const API_BASE = process.env.API_BASE || 'http://localhost:4000';
 
