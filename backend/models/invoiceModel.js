@@ -43,7 +43,7 @@ const invoiceSchema = new mongoose.Schema({
         required: true
     },
 
-    items: [itemSchema],
+    items: [itemSchema],  // ✅ Fixed: changed from ItemSchema to itemSchema
 
     // Business info
     fromBusinessName: { type: String, default: "" },
@@ -60,9 +60,7 @@ const invoiceSchema = new mongoose.Schema({
         phone: { type: String, default: "" }
     },
 
-    items: { type: [ItemSchema], default: () => [] }
-
-    currency: { type: String, default: "KSH" },
+    currency: { type: String, default: "KSH" },  // ✅ Now has proper comma before it
     status: { 
         type: String, 
         enum: ["draft", "unpaid", "paid", "overdue"], 
