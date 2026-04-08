@@ -1,4 +1,24 @@
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink, useNavigate, Outlet } from 'react-router-dom';
+import { useClerk, useUser } from '@clerk/clerk-react';
+import { appShellStyles } from './assets/dummyStyles';
+import logo from './assets/logo';
 
+const AppShell = () => {
+  const navigate = useNavigate();
+  const { signOut } = useClerk();
+  const { user } = useUser();
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("sidebar_collapsed") === "true";
+    } catch (error) {
+      return false;
+    }
+  });
 
   // Check screen size for responsive behavior
   useEffect(() => {
@@ -50,7 +70,20 @@
       parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
     ).toUpperCase();
   };
-  /* ----- Icons (kept as you had) ----- */
+
+  // logout
+  const logout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.warn("Signout error:", error);
+    }
+  };
+
+  // toggle sidebar
+  const toggleSidebar = () => setCollapsed(!collapsed);
+
+  /* ----- Icons ----- */
   const DashboardIcon = ({ className = "w-5 h-5" }) => (
     <svg
       className={className}
@@ -121,25 +154,7 @@
     </svg>
   );
 
-  const CollapseIcon = ({ className = "w-4 h-4", collapsed }) => (
-    <svg
-      className={`${className} transition-transform duration-300 ${
-        collapsed ? "rotate-180" : ""
-      }`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-      />
-    </svg>
-  );
-
-  /* ----- SidebarLink ----- */
+  /* ----- SidebarLink Component ----- */
   const SidebarLink = ({ to, icon, children }) => (
     <NavLink
       to={to}
@@ -176,40 +191,115 @@
     </NavLink>
   );
 
+  return (
+    <div className={appShellStyles.root}>
+      <div className={appShellStyles.layout}>
+        {/* Sidebar */}
+        <aside className={appShellStyles.sidebar}>
+          <div className={appShellStyles.sidebarGradient} />
+          
+          <div className={appShellStyles.sidebarContent}>
+            {/* Logo */}
+            <div className={`${appShellStyles.logoContainer} ${collapsed ? appShellStyles.logoContainerCollapsed : ''}`}>
+              <Link to="/app" className={appShellStyles.logoLink}>
+                <div className="relative">
+                  <img src={logo} alt="logo" className={appShellStyles.logoImage} />
+                  <div className="absolute inset-0 rounded-lg blur-sm group-hover:blur-md transition-all duration-300" />
+                </div>
+                {!collapsed && (
+                  <div className={appShellStyles.logoTextContainer}>
+                    <span className={appShellStyles.logoText}>InvoiceAI</span>
+                    <div className={appShellStyles.logoDivider} />
+                  </div>
+                )}
+              </Link>
+            </div>
 
+            {/* Navigation */}
+            <nav className={appShellStyles.nav}>
+              <SidebarLink to="/app/dashboard" icon={<DashboardIcon />}>
+                Dashboard
+              </SidebarLink>
+              <SidebarLink to="/app/invoices" icon={<InvoiceIcon />}>
+                Invoices
+              </SidebarLink>
+              <SidebarLink to="/app/create-invoice" icon={<CreateIcon />}>
+                Create Invoice
+              </SidebarLink>
+              <SidebarLink to="/app/business" icon={<ProfileIcon />}>
+                Business Profile
+              </SidebarLink>
+            </nav>
 
+            {/* User Section */}
+            <div className={appShellStyles.userSection}>
+              <div className={appShellStyles.userDivider} />
+              
+              <div className={collapsed ? appShellStyles.userDividerCollapsed : appShellStyles.userDividerExpanded}>
+                <div className={appShellStyles.userAvatarContainer}>
+                  <div className={appShellStyles.userAvatar}>
+                    {initials()}
+                    <div className={appShellStyles.userAvatarBorder} />
+                  </div>
+                </div>
+                
+                {!collapsed && (
+                  <div className={appShellStyles.userInfo}>
+                    <div className={appShellStyles.userName}>{displayName}</div>
+                    <div className={appShellStyles.userEmail}>{user?.primaryEmailAddress?.emailAddress || user?.email}</div>
+                  </div>
+                )}
+              </div>
 
-              <nav className={appShellStyles.nav}>
-                <SidebarLink to="/app/dashboard" icon={<DashboardIcon />}>
-                  Dashboard
-                </SidebarLink>
-                <SidebarLink to="/app/invoices" icon={<InvoiceIcon />}>
-                  Invoices
-                </SidebarLink>
-                <SidebarLink to="/app/create-invoice" icon={<CreateIcon />}>
-                  Create Invoice
-                </SidebarLink>
-                <SidebarLink to="/app/business" icon={<ProfileIcon />}>
-                  Business Profile
-                </SidebarLink>
-              </nav>
+              {!collapsed ? (
+                <button onClick={logout} className={appShellStyles.logoutButton}>
+                  <LogoutIcon className={appShellStyles.logoutIcon} />
+                  <span>Logout</span>
+                </button>
+              ) : (
+                <button onClick={logout} className="w-full flex items-center justify-center p-3 rounded-xl text-red-600 hover:bg-red-50 hover:shadow-md transition-all duration-300">
+                  <LogoutIcon className="w-5 h-5 hover:scale-110 transition-transform" />
+                </button>
+              )}
+            </div>
 
+            {/* Collapse Button */}
+            <div className={appShellStyles.collapseSection}>
+              <button 
+                onClick={toggleSidebar} 
+                className={`${appShellStyles.collapseButtonInner} ${collapsed ? appShellStyles.collapseButtonCollapsed : ''}`}
+              >
+                <svg 
+                  className={`w-4 h-4 transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </aside>
 
-
-
-        {/* Mobile Sidebar */}
-                  <svg
-                    className={appShellStyles.mobileCloseIcon}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
+        {/* Mobile Sidebar Drawer */}
+        {mobileOpen && (
+          <>
+            <div className={appShellStyles.mobileOverlay} onClick={() => setMobileOpen(false)} />
+            <div className={appShellStyles.mobileSidebar}>
+              <div className={appShellStyles.mobileHeader}>
+                <Link to="/app" className={appShellStyles.mobileLogoLink} onClick={() => setMobileOpen(false)}>
+                  <img src={logo} alt="logo" className={appShellStyles.mobileLogoImage} />
+                </Link>
+                <button onClick={() => setMobileOpen(false)} className={appShellStyles.mobileCloseButton}>
+                  <svg className={appShellStyles.mobileCloseIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M6 18L18 6M6 6l12 12" />
                   </svg>
-
-
-                      <nav className={appShellStyles.mobileNav}>
+                </button>
+              </div>
+              
+              <nav className={appShellStyles.mobileNav}>
                 <NavLink
                   onClick={() => setMobileOpen(false)}
                   to="/app/dashboard"
@@ -221,7 +311,6 @@
                     }`
                   }
                 >
-                  {" "}
                   <DashboardIcon /> Dashboard
                 </NavLink>
                 <NavLink
@@ -235,7 +324,6 @@
                     }`
                   }
                 >
-                  {" "}
                   <InvoiceIcon /> Invoices
                 </NavLink>
                 <NavLink
@@ -249,7 +337,6 @@
                     }`
                   }
                 >
-                  {" "}
                   <CreateIcon /> Create Invoice
                 </NavLink>
                 <NavLink
@@ -263,19 +350,82 @@
                     }`
                   }
                 >
-                  {" "}
                   <ProfileIcon /> Business Profile
                 </NavLink>
               </nav>
+              
+              <div className={appShellStyles.mobileFooter}>
+                <button onClick={logout} className={appShellStyles.mobileLogoutButton}>
+                  <LogoutIcon /> Logout
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
-             
-                  <svg
-                    className={appShellStyles.mobileMenuIcon}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-            
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <header>
+            <div className={`${appShellStyles.header} ${scrolled ? appShellStyles.headerScroll : appShellStyles.headerNotScroll}`}>
+              {/* Mobile Menu Button */}
+              <button onClick={() => setMobileOpen(true)} className={appShellStyles.mobileMenuButton}>
+                <svg className={appShellStyles.mobileMenuIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+
+              {/* Welcome Section */}
+              <div className={appShellStyles.welcomeContainer}>
+                <h2 className={appShellStyles.welcomeTitle}>
+                  Welcome back,{" "}
+                  <span className={appShellStyles.welcomeName}>
+                    {firstName()}
+                  </span>
+                </h2>
+                <p className={appShellStyles.welcomeSubtitle}>
+                  Manage your invoices and business
+                </p>
+              </div>
+
+              {/* Header Actions */}
+              <div className={appShellStyles.headerActions}>
+                <button
+                  onClick={() => navigate("/app/create-invoice")}
+                  className={appShellStyles.ctaButton}
+                >
+                  <CreateIcon className={appShellStyles.ctaIcon} />
+                  <span className="hidden xs:inline">Create Invoice</span>
+                  <span className="xs:hidden">Create</span>
+                </button>
+
+                {/* Desktop User Section */}
+                <div className={appShellStyles.userSectionDesktop}>
+                  <div className={appShellStyles.userInfo}>
+                    <div className={appShellStyles.userName}>{displayName}</div>
+                    <div className={appShellStyles.userEmail}>{user?.primaryEmailAddress?.emailAddress || user?.email}</div>
+                  </div>
+                  <div className={appShellStyles.userAvatarContainer}>
+                    <div className={appShellStyles.userAvatar}>
+                      {initials()}
+                      <div className={appShellStyles.userAvatarBorder} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className={appShellStyles.main}>
+            <div className={appShellStyles.mainContainer}>
+              <Outlet />
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AppShell;
