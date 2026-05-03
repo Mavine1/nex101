@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, Outlet } from 'react-router-dom';
 import { useClerk, useUser } from '@clerk/clerk-react';
-import { appShellStyles } from './assets/dummyStyles';
-import logo from './assets/logo';
+import appShellStyles from "../assets/dummyStyles.module.css";
+import logo from "../assets/logo.svg";
 
 // Icons - moved outside component to prevent recreation on each render
 const DashboardIcon = () => (
