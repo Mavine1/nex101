@@ -85,21 +85,19 @@ const Hero = () => {
                     onClick={handleSignedOutPrimary}
                     className={heroStyles.primaryButton}
                   >
-                    <>
-                      <div className={heroStyles.primaryButtonOverlay} />
-                      <span className={heroStyles.previewButtonText}>
-                        Start Creating Free
-                      </span>
-                      <svg
-                        className={heroStyles.primaryButtonIcon}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M5 12h14m-7-7l7 7-7 7" />
-                      </svg>
-                    </>
+                    <div className={heroStyles.primaryButtonOverlay} />
+                    <span className={heroStyles.previewButtonText}>
+                      Start Creating Free
+                    </span>
+                    <svg
+                      className={heroStyles.primaryButtonIcon}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M5 12h14m-7-7l7 7-7 7" />
+                    </svg>
                   </button>
                 </SignedOut>
 
