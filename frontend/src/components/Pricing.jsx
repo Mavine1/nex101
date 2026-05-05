@@ -7,10 +7,10 @@ const PricingCard = ({
   title,
   price,
   period,
+  billingPeriod,
   description,
   features = [],
   isPopular = false,
-  isAnnual = false,
   delay = 0,
   onCtaClick,
 }) => {
@@ -124,13 +124,11 @@ const PricingCard = ({
     </div>
   );
 };
-
 const Pricing = () => {
   const [billingPeriod, setBillingPeriod] = useState("monthly"); // "weekly", "monthly", "annual"
   const clerk = useClerk();
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
-
   // All prices in Kenyan Shillings (KSh)
   const plans = {
     weekly: [
