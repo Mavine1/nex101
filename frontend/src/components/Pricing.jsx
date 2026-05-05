@@ -268,7 +268,7 @@ const Pricing = () => {
         </div>
 
         {/* Centered Billing Toggle – removed bottom margin */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-10">
           <div className={pricingStyles.billingToggle}>
             <button
               onClick={() => setBillingPeriod("monthly")}
@@ -295,7 +295,7 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards Grid – removed top margin */}
-        <div className={`${pricingStyles.grid} mt-8`}>
+        <div className={`${pricingStyles.grid} mt-10`}>
           {currentPlans.map((plan, index) => (
             <PricingCard
               key={plan.title}
