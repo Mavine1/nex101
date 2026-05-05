@@ -52,7 +52,7 @@ const PricingCard = ({
             </span>
             {period && <span className={pricingCardStyles.period}>/{period}</span>}
           </div>
-          {isAnnual && (
+          {period === "year" && (
             <div className={pricingCardStyles.annualBadge}>Save 20% annually</div>
           )}
         </div>
@@ -85,7 +85,7 @@ const PricingCard = ({
           <SignedIn>
             <button
               type="button"
-              onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual })}
+              onClick={() => onCtaClick && onCtaClick({ title, isPopular, period: billingPeriod })}
               className={`${pricingCardStyles.ctaButton} ${
                 isPopular
                   ? pricingCardStyles.ctaButtonPopular
@@ -110,7 +110,7 @@ const PricingCard = ({
               onClick={() =>
                 onCtaClick &&
                 onCtaClick(
-                  { title, isPopular, isAnnual },
+                  { title, isPopular, period: billingPeriod },
                   { openSignInFallback: true }
                 )
               }
@@ -126,16 +126,68 @@ const PricingCard = ({
 };
 
 const Pricing = () => {
-  const [billingPeriod, setBillingPeriod] = useState("monthly");
+  const [billingPeriod, setBillingPeriod] = useState("monthly"); // "weekly", "monthly", "annual"
   const clerk = useClerk();
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
 
+  // All prices in Kenyan Shillings (KSh)
   const plans = {
+    weekly: [
+      {
+        title: "Starter",
+        price: "KSh 0",
+        period: "week",
+        description: "Perfect for freelancers and small projects",
+        features: [
+          "5 invoices per week",
+          "Basic AI parsing",
+          "Standard templates",
+          "Email support",
+          "PDF export",
+        ],
+        isPopular: false,
+      },
+      {
+        title: "Professional",
+        price: "KSh 500",
+        period: "week",
+        description: "For growing businesses and agencies",
+        features: [
+          "Unlimited invoices",
+          "Advanced AI parsing",
+          "Custom branding",
+          "Priority support",
+          "Advanced analytics",
+          "Team collaboration (3 members)",
+          "API access",
+          "Unlimited AI tokens",
+          "Expenses module",
+        ],
+        isPopular: true,
+      },
+      {
+        title: "Enterprise",
+        price: "KSh 650",
+        period: "week",
+        description: "For large organizations with custom needs",
+        features: [
+          "Everything in Professional",
+          "Unlimited AI tokens",
+          "Unlimited team members",
+          "Custom workflows",
+          "Dedicated account manager",
+          "SLA guarantee",
+          "White-label solutions",
+          "Advanced security",
+        ],
+        isPopular: false,
+      },
+    ],
     monthly: [
       {
         title: "Starter",
-        price: "₹0",
+        price: "KSh 0",
         period: "month",
         description: "Perfect for freelancers and small projects",
         features: [
@@ -149,7 +201,7 @@ const Pricing = () => {
       },
       {
         title: "Professional",
-        price: "₹499",
+        price: "KSh 1,999",
         period: "month",
         description: "For growing businesses and agencies",
         features: [
@@ -160,16 +212,19 @@ const Pricing = () => {
           "Advanced analytics",
           "Team collaboration (3 members)",
           "API access",
+          "Unlimited AI tokens",
+          "Expenses module",
         ],
         isPopular: true,
       },
       {
         title: "Enterprise",
-        price: "₹1,499",
+        price: "KSh 2,599",
         period: "month",
         description: "For large organizations with custom needs",
         features: [
           "Everything in Professional",
+          "Unlimited AI tokens",
           "Unlimited team members",
           "Custom workflows",
           "Dedicated account manager",
@@ -183,8 +238,8 @@ const Pricing = () => {
     annual: [
       {
         title: "Starter",
-        price: "₹0",
-        period: "month",
+        price: "KSh 0",
+        period: "year",
         description: "Perfect for freelancers and small projects",
         features: [
           "5 invoices per month",
@@ -194,13 +249,13 @@ const Pricing = () => {
           "PDF export",
         ],
         isPopular: false,
-        isAnnual: false,
+        isAnnual: true,
       },
       {
         title: "Professional",
-        price: "₹399",
-        period: "month",
-        description: "For growing businesses and agencies",
+        price: "KSh 19,990",
+        period: "year",
+        description: "For growing businesses and agencies (billed annually)",
         features: [
           "Unlimited invoices",
           "Advanced AI parsing",
@@ -209,17 +264,20 @@ const Pricing = () => {
           "Advanced analytics",
           "Team collaboration (3 members)",
           "API access",
+          "Unlimited AI tokens",
+          "Expenses module",
         ],
         isPopular: true,
         isAnnual: true,
       },
       {
         title: "Enterprise",
-        price: "₹1,199",
-        period: "month",
-        description: "For large organizations with custom needs",
+        price: "KSh 25,990",
+        period: "year",
+        description: "For large organizations with custom needs (billed annually)",
         features: [
           "Everything in Professional",
+          "Unlimited AI tokens",
           "Unlimited team members",
           "Custom workflows",
           "Dedicated account manager",
@@ -247,14 +305,14 @@ const Pricing = () => {
     navigate("/app/create-invoice", { state: { fromPlan: planMeta } });
   };
 
-  // Additional features list (from your snippet)
+  // Additional features list
   const additionalFeatures = [
     "Secure cloud storage",
     "Mobile-friendly interface",
     "Automatic backups",
     "Real-time notifications",
     "Multi-currency support",
-    "Tax calculation",
+    "Tax calculation (Kenya VAT 16%)",
   ];
 
   return (
@@ -277,35 +335,47 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Centered Billing Toggle */}
+        {/* Billing Toggle – now three options */}
         <div className="flex justify-center mb-10">
-          <div className={pricingStyles.billingToggle}>
+          <div className="inline-flex bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-gray-200/60 shadow-sm gap-2">
+            <button
+              onClick={() => setBillingPeriod("weekly")}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                billingPeriod === "weekly"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Weekly
+            </button>
             <button
               onClick={() => setBillingPeriod("monthly")}
-              className={`${pricingStyles.billingButton} ${
+              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
                 billingPeriod === "monthly"
-                  ? pricingStyles.billingButtonActive
-                  : pricingStyles.billingButtonInactive
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Monthly
             </button>
             <button
               onClick={() => setBillingPeriod("annual")}
-              className={`${pricingStyles.billingButton} ${
+              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
                 billingPeriod === "annual"
-                  ? pricingStyles.billingButtonActive
-                  : pricingStyles.billingButtonInactive
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Annual
-              <span className={pricingStyles.billingBadge}>Save 20%</span>
+              <span className="ml-2 text-sm bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                Save 20%
+              </span>
             </button>
           </div>
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className={`${pricingStyles.grid} mt-10`}>
+        <div className={pricingStyles.grid}>
           {currentPlans.map((plan, index) => (
             <PricingCard
               key={plan.title}
@@ -322,7 +392,7 @@ const Pricing = () => {
           ))}
         </div>
 
-        {/* Additional Features Section (from your snippets) */}
+        {/* Additional Features Section */}
         <div className={pricingStyles.additionalInfo}>
           <div className={pricingStyles.featuresCard}>
             <h3 className="text-xl font-bold text-gray-900 mb-4">
