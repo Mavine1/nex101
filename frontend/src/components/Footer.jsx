@@ -33,44 +33,6 @@ const Footer = () => {
         <div className={footerStyles.copyright}>
           © 2026 NEX101 Ltd. All rights reserved.
         </div>
-        <div className={footerStyles.mediaLinks}>
-          <a
-            href="https://twitter.com/nex10"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={footerStyles.mediaLink}
-            aria-label="Twitter"
-          >
-            <TwitterIcon />
-          </a>
-          <a
-            href="https://linkedin.com/company/nex10"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={footerStyles.mediaLink}
-            aria-label="LinkedIn"
-          >
-            <LinkedInIcon />
-          </a>
-          <a
-            href="https://instagram.com/nex10"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={footerStyles.mediaLink}
-            aria-label="Instagram"
-          >
-            <InstagramIcon />
-          </a>
-          <a
-            href="https://tiktok.com/@nex10"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={footerStyles.mediaLink}
-            aria-label="TikTok"
-          >
-            <TikTokIcon />
-          </a>
-        </div>
         <div className={footerStyles.links}>
           <a href="/terms" className={footerStyles.link}>
             Terms
