@@ -1,4 +1,9 @@
+import React, { useState } from "react";
+import { pricingStyles, pricingCardStyles } from "../assets/dummyStyles";
+import { useAuth, useClerk, SignedIn, SignedOut } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 
+const PricingCard = ({
   title,
   price,
   period,
@@ -8,100 +13,137 @@
   isAnnual = false,
   delay = 0,
   onCtaClick,
+}) => {
+  return (
+    <div
+      className={`${pricingCardStyles.card} ${
+        isPopular ? pricingCardStyles.cardPopular : pricingCardStyles.cardRegular
+      }`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {isPopular && (
+        <div className={pricingCardStyles.popularBadge}>
+          <div className={pricingCardStyles.popularBadgeContent}>Most Popular</div>
+        </div>
+      )}
+      {isPopular && <div className={pricingCardStyles.gradientOverlay} />}
+      <div className={pricingCardStyles.animatedBorder}></div>
 
+      <div className={pricingCardStyles.content}>
+        <div className={pricingCardStyles.header}>
+          <h3
+            className={`${
+              isPopular
+                ? pricingCardStyles.titleRegular
+                : pricingCardStyles.title
+            }`}
+          >
+            {title}
+          </h3>
+          <p className={pricingCardStyles.description}>{description}</p>
+        </div>
 
- <ul className={pricingCardStyles.featuresList}>
-        {features.map((feature, index) => (
-          <li key={index} className={pricingCardStyles.featureItem}>
-            <div
-              className={`
-                ${pricingCardStyles.featureIcon}
-                ${
+        <div className={pricingCardStyles.priceContainer}>
+          <div className={pricingCardStyles.priceWrapper}>
+            <span
+              className={`${pricingCardStyles.price} ${
+                isPopular
+                  ? pricingCardStyles.pricePopular
+                  : pricingCardStyles.priceRegular
+              }`}
+            >
+              {price}
+            </span>
+            {period && (
+              <span className={pricingCardStyles.period}>/{period}</span>
+            )}
+          </div>
+          {isAnnual && (
+            <div className={pricingCardStyles.annualBadge}>Save 20% annually</div>
+          )}
+        </div>
+
+        <ul className={pricingCardStyles.featuresList}>
+          {features.map((feature, idx) => (
+            <li key={idx} className={pricingCardStyles.featureItem}>
+              <div
+                className={`${pricingCardStyles.featureIcon} ${
                   isPopular
                     ? pricingCardStyles.featureIconPopular
                     : pricingCardStyles.featureIconRegular
-                }
-              `}
-            >
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={3}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <span className={pricingCardStyles.featureText}>{feature}</span>
-          </li>
-        ))}
-      </ul>
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <span className={pricingCardStyles.featureText}>{feature}</span>
+            </li>
+          ))}
+        </ul>
 
-      {/* CTA area: show different button/label depending on auth state */}
-      <div style={{ marginTop: 12 }}>
-        <SignedIn>
-          <button
-            type="button"
-            onClick={() =>
-              onCtaClick && onCtaClick({ title, isPopular, isAnnual })
-            }
-            className={`
-              ${pricingCardStyles.ctaButton}
-              ${
+        {/* CTA area */}
+        <div style={{ marginTop: 12 }}>
+          <SignedIn>
+            <button
+              type="button"
+              onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual })}
+              className={`${pricingCardStyles.ctaButton} ${
                 isPopular
                   ? pricingCardStyles.ctaButtonPopular
                   : pricingCardStyles.ctaButtonRegular
-              }
-            `}
-          >
-            <span
-              className={`
-                ${pricingCardStyles.ctaButtonText}
-                ${
+              }`}
+            >
+              <span
+                className={`${pricingCardStyles.ctaButtonText} ${
                   isPopular
                     ? pricingCardStyles.ctaButtonTextPopular
                     : pricingCardStyles.ctaButtonTextRegular
-                }
-              `}
-            >
-              {isPopular ? "Get Started" : "Choose Plan"}
-            </span>
-          </button>
-        </SignedIn>
+                }`}
+              >
+                {isPopular ? "Get Started" : "Choose Plan"}
+              </span>
+            </button>
+          </SignedIn>
 
-        <SignedOut>
-          <button
-            type="button"
-            onClick={() =>
-              onCtaClick &&
-              onCtaClick(
-                { title, isPopular, isAnnual },
-                { openSignInFallback: true }
-              )
-            }
-            className={`
-              ${pricingCardStyles.ctaButton}
-              ${pricingCardStyles.ctaButtonRegular}
-            `}
-          >
-            <span className={pricingCardStyles.ctaButtonText}>
-              Sign in to get started
-            </span>
-          </button>
-        </SignedOut>
+          <SignedOut>
+            <button
+              type="button"
+              onClick={() =>
+                onCtaClick &&
+                onCtaClick(
+                  { title, isPopular, isAnnual },
+                  { openSignInFallback: true }
+                )
+              }
+              className={`${pricingCardStyles.ctaButton} ${pricingCardStyles.ctaButtonRegular}`}
+            >
+              <span className={pricingCardStyles.ctaButtonText}>
+                Sign in to get started
+              </span>
+            </button>
+          </SignedOut>
+        </div>
       </div>
     </div>
+  );
+};
 
-
-
-
-
-
+const Pricing = () => {
+  const [billingPeriod, setBillingPeriod] = useState("monthly");
+  const clerk = useClerk();
+  const { isSignedIn } = useAuth();
+  const navigate = useNavigate();
 
   const plans = {
     monthly: [
@@ -207,18 +249,84 @@
 
   const currentPlans = plans[billingPeriod];
 
+  const handleCtaClick = (planMeta, flags = {}) => {
+    if (flags.openSignInFallback || !isSignedIn) {
+      if (clerk && typeof clerk.openSignIn === "function") {
+        clerk.openSignIn({ redirectUrl: "/app/create-invoice" });
+      } else {
+        navigate("/sign-in");
+      }
+      return;
+    }
+    navigate("/app/create-invoice", { state: { fromPlan: planMeta } });
+  };
 
+  return (
+    <section id="pricing" className={pricingStyles.section}>
+      <div className={pricingStyles.bgElement1}></div>
+      <div className={pricingStyles.bgElement2}></div>
+      <div className={pricingStyles.bgElement3}></div>
 
+      <div className={pricingStyles.container}>
+        <div className={pricingStyles.headerContainer}>
+          <div className={pricingStyles.badge}>
+            <span className={pricingStyles.badgeDot}></span>
+            <span className={pricingStyles.badgeText}>Transparent Pricing</span>
+          </div>
 
+          <h2 className={pricingStyles.title}>
+            Simple, <span className={pricingStyles.titleGradient}>Fair</span>
+          </h2>
 
-              {[
-                "Secure cloud storage",
-                "Mobile-friendly interface",
-                "Automatic backups",
-                "Real-time notifications",
-                "Multi-currency support",
-                "Tax calculation",
-              ].map((feature, index) => (
+          <p className={pricingStyles.description}>
+            Start free, upgrade as you grow. No hidden fees, no surprise charges.
+          </p>
+        </div>
 
-              ))}
-         
+        {/* Billing Toggle */}
+        <div className={pricingStyles.billingToggle}>
+          <button
+            onClick={() => setBillingPeriod("monthly")}
+            className={`${pricingStyles.billingButton} ${
+              billingPeriod === "monthly"
+                ? pricingStyles.billingButtonActive
+                : pricingStyles.billingButtonInactive
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBillingPeriod("annual")}
+            className={`${pricingStyles.billingButton} ${
+              billingPeriod === "annual"
+                ? pricingStyles.billingButtonActive
+                : pricingStyles.billingButtonInactive
+            }`}
+          >
+            Annual
+          </button>
+        </div>
+
+        {/* Pricing Cards Grid */}
+        <div className={pricingStyles.cardsGrid}>
+          {currentPlans.map((plan, index) => (
+            <PricingCard
+              key={plan.title}
+              title={plan.title}
+              price={plan.price}
+              period={plan.period}
+              description={plan.description}
+              features={plan.features}
+              isPopular={plan.isPopular}
+              isAnnual={plan.isAnnual || false}
+              delay={index * 100}
+              onCtaClick={handleCtaClick}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default Pricing;
