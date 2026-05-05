@@ -14,12 +14,26 @@ const Navbar = () => {
   const profileRef = useRef(null);
   const TOKEN_KEY = "token";
 
-  // Open sign-in modal
+  // Open sign‑in modal
   const openSignIn = () => {
     if (clerk && typeof clerk.openSignIn === "function") {
       clerk.openSignIn({ redirectUrl: "/" });
     } else {
       navigate("/sign-in");
+    }
+  };
+
+  // Open sign‑up modal
+  const openSignUp = () => {
+    try {
+      if (clerk && typeof clerk.openSignUp === "function") {
+        clerk.openSignUp();
+      } else {
+        navigate("/sign-up");
+      }
+    } catch (e) {
+      console.error("openSignUp failed:", e);
+      navigate("/sign-up");
     }
   };
 
@@ -73,11 +87,12 @@ const Navbar = () => {
                 Sign In
               </button>
               <button
-                onClick={() => navigate("/sign-up")}
+                onClick={openSignUp}
                 className={navbarStyles.signUpButton}
                 type="button"
               >
-                Sign Up
+                <div className={navbarStyles.signUpOverlay}></div>
+                <span className={navbarStyles.signUpText}>Get Started</span>
               </button>
             </SignedOut>
 
@@ -94,7 +109,9 @@ const Navbar = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border">
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
                       {user?.firstName} {user?.lastName}
-                      <div className="text-xs text-gray-500">{user?.primaryEmailAddress?.emailAddress}</div>
+                      <div className="text-xs text-gray-500">
+                        {user?.primaryEmailAddress?.emailAddress}
+                      </div>
                     </div>
                     <button
                       onClick={() => navigate("/dashboard")}
@@ -121,59 +138,83 @@ const Navbar = () => {
             type="button"
           >
             <div className={navbarStyles.mobileMenuIcon}>
-              <span className={`${navbarStyles.mobileMenuLine1} ${open ? navbarStyles.mobileMenuLine1Open : navbarStyles.mobileMenuLine1Closed}`} />
-              <span className={`${navbarStyles.mobileMenuLine2} ${open ? navbarStyles.mobileMenuLine2Open : navbarStyles.mobileMenuLine2Closed}`} />
-              <span className={`${navbarStyles.mobileMenuLine3} ${open ? navbarStyles.mobileMenuLine3Open : navbarStyles.mobileMenuLine3Closed}`} />
+              <span
+                className={`${navbarStyles.mobileMenuLine1} ${
+                  open
+                    ? navbarStyles.mobileMenuLine1Open
+                    : navbarStyles.mobileMenuLine1Closed
+                }`}
+              />
+              <span
+                className={`${navbarStyles.mobileMenuLine2} ${
+                  open
+                    ? navbarStyles.mobileMenuLine2Open
+                    : navbarStyles.mobileMenuLine2Closed
+                }`}
+              />
+              <span
+                className={`${navbarStyles.mobileMenuLine3} ${
+                  open
+                    ? navbarStyles.mobileMenuLine3Open
+                    : navbarStyles.mobileMenuLine3Closed
+                }`}
+              />
             </div>
           </button>
         </nav>
 
-        {/* Mobile Menu */}
-        {open && (
-          <div className={navbarStyles.mobileMenu}>
-            <div className={navbarStyles.mobileMenuContainer}>
-              <a href="#features" className={navbarStyles.mobileNavLink} onClick={() => setOpen(false)}>
-                Features
-              </a>
-              <a href="#pricing" className={navbarStyles.mobileNavLink} onClick={() => setOpen(false)}>
-                Pricing
-              </a>
-              <div className={navbarStyles.mobileAuthSection}>
-                <SignedOut>
-                  <button
-                    onClick={() => {
-                      openSignIn();
-                      setOpen(false);
-                    }}
-                    className={navbarStyles.mobileSignIn}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigate("/sign-up");
-                      setOpen(false);
-                    }}
-                    className={navbarStyles.mobileSignUp}
-                  >
-                    Sign Up
-                  </button>
-                </SignedOut>
-                <SignedIn>
-                  <button
-                    onClick={() => {
-                      clerk.signOut();
-                      setOpen(false);
-                    }}
-                    className={navbarStyles.mobileSignIn}
-                  >
-                    Sign Out
-                  </button>
-                </SignedIn>
-              </div>
+        {/* Mobile Menu Panel */}
+        <div className={`${open ? "block" : "hidden"} ${navbarStyles.mobileMenu}`}>
+          <div className={navbarStyles.mobileMenuContainer}>
+            <a
+              href="#features"
+              className={navbarStyles.mobileNavLink}
+              onClick={() => setOpen(false)}
+            >
+              Features
+            </a>
+            <a
+              href="#pricing"
+              className={navbarStyles.mobileNavLink}
+              onClick={() => setOpen(false)}
+            >
+              Pricing
+            </a>
+            <div className={navbarStyles.mobileAuthSection}>
+              <SignedOut>
+                <button
+                  onClick={() => {
+                    openSignIn();
+                    setOpen(false);
+                  }}
+                  className={navbarStyles.mobileSignIn}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => {
+                    openSignUp();
+                    setOpen(false);
+                  }}
+                  className={navbarStyles.mobileSignUp}
+                >
+                  Get Started
+                </button>
+              </SignedOut>
+              <SignedIn>
+                <button
+                  onClick={() => {
+                    clerk.signOut();
+                    setOpen(false);
+                  }}
+                  className={navbarStyles.mobileSignIn}
+                >
+                  Sign Out
+                </button>
+              </SignedIn>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </header>
   );
