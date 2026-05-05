@@ -158,7 +158,7 @@ const Pricing = () => {
           "Custom branding",
           "Priority support",
           "Advanced analytics",
-          "Team collaboration (3 members)",   // exact as requested
+          "Team collaboration (3 members)",
           "API access",
         ],
         isPopular: true,
@@ -174,7 +174,7 @@ const Pricing = () => {
           "Custom workflows",
           "Dedicated account manager",
           "SLA guarantee",
-          "White-label solutions",            // hyphenated as requested
+          "White-label solutions",
           "Advanced security",
         ],
         isPopular: false,
@@ -267,8 +267,8 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Centered Billing Toggle */}
-        <div className="flex justify-center">
+        {/* Centered Billing Toggle – removed bottom margin */}
+        <div className="flex justify-center mb-8">
           <div className={pricingStyles.billingToggle}>
             <button
               onClick={() => setBillingPeriod("monthly")}
@@ -294,8 +294,8 @@ const Pricing = () => {
           </div>
         </div>
 
-        {/* Horizontal Pricing Grid */}
-        <div className={pricingStyles.grid}>
+        {/* Pricing Cards Grid – removed top margin */}
+        <div className={`${pricingStyles.grid} mt-8`}>
           {currentPlans.map((plan, index) => (
             <PricingCard
               key={plan.title}
