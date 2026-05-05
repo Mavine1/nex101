@@ -17,7 +17,7 @@ const Home = () => {
           <Pricing /> 
         </section>
       </main>
-      <footer/>
+      <footer />
     </div>
   );
 };
