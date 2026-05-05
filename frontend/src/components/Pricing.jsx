@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { pricingStyles, pricingCardStyles } from "../assets/dummyStyles";
 import { useAuth, useClerk, SignedIn, SignedOut } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
+import { pricingStyles, pricingCardStyles } from "../assets/dummyStyles";
 
 const PricingCard = ({
   title,
@@ -23,7 +23,9 @@ const PricingCard = ({
     >
       {isPopular && (
         <div className={pricingCardStyles.popularBadge}>
-          <div className={pricingCardStyles.popularBadgeContent}>Most Popular</div>
+          <div className={pricingCardStyles.popularBadgeContent}>
+            Most Popular
+          </div>
         </div>
       )}
       {isPopular && <div className={pricingCardStyles.gradientOverlay} />}
@@ -31,17 +33,37 @@ const PricingCard = ({
 
       <div className={pricingCardStyles.content}>
         <div className={pricingCardStyles.header}>
-          <h3 className={pricingCardStyles.title}>{title}</h3>
+          <h3
+            className={`${
+              isPopular
+                ? pricingCardStyles.titlePopular
+                : pricingCardStyles.titleRegular
+            } ${pricingCardStyles.title}`}
+          >
+            {title}
+          </h3>
           <p className={pricingCardStyles.description}>{description}</p>
         </div>
 
         <div className={pricingCardStyles.priceContainer}>
           <div className={pricingCardStyles.priceWrapper}>
-            <span className={pricingCardStyles.price}>{price}</span>
-            {period && <span className={pricingCardStyles.period}>/{period}</span>}
+            <span
+              className={`${pricingCardStyles.price} ${
+                isPopular
+                  ? pricingCardStyles.pricePopular
+                  : pricingCardStyles.priceRegular
+              }`}
+            >
+              {price}
+            </span>
+            {period && (
+              <span className={pricingCardStyles.period}>/{period}</span>
+            )}
           </div>
           {isAnnual && (
-            <div className={pricingCardStyles.annualBadge}>Save 20% annually</div>
+            <div className={pricingCardStyles.annualBadge}>
+              Save 20% annually
+            </div>
           )}
         </div>
 
@@ -252,13 +274,16 @@ const Pricing = () => {
         <div className={pricingStyles.headerContainer}>
           <div className={pricingStyles.badge}>
             <span className={pricingStyles.badgeDot}></span>
-            <span className={pricingStyles.badgeText}>Transparent Pricing</span>
+            <span className={pricingStyles.badgeText}>
+              Transparent Pricing
+            </span>
           </div>
           <h2 className={pricingStyles.title}>
             Simple, <span className={pricingStyles.titleGradient}>Fair</span>
           </h2>
           <p className={pricingStyles.description}>
-            Start free, upgrade as you grow. No hidden fees, no surprise charges.
+            Start free, upgrade as you grow. No hidden fees, no surprise
+            charges.
           </p>
         </div>
 
@@ -283,11 +308,12 @@ const Pricing = () => {
             }`}
           >
             Annual
+            <span className={pricingStyles.billingBadge}>Save 20%</span>
           </button>
         </div>
 
-        {/* Horizontal Cards Grid */}
-        <div className={pricingStyles.cardsGrid}>
+        {/* Pricing Cards Grid - horizontal on large screens */}
+        <div className={pricingStyles.grid}>
           {currentPlans.map((plan, index) => (
             <PricingCard
               key={plan.title}
