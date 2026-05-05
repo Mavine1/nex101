@@ -2,7 +2,8 @@ import React from "react";
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Features from "../components/Features";
-import Pricing from "../components/Pricing"; 
+import Pricing from "../components/Pricing";
+import Footer from "../components/Footer";  // ✅ import Footer
 
 const Home = () => {
   return (
@@ -14,10 +15,10 @@ const Home = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <Features />
           </div>
-          <Pricing /> 
+          <Pricing />
         </section>
       </main>
-      <footer />
+      <Footer />  
     </div>
   );
 };
