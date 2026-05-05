@@ -31,32 +31,14 @@ const PricingCard = ({
 
       <div className={pricingCardStyles.content}>
         <div className={pricingCardStyles.header}>
-          <h3
-            className={`${
-              isPopular
-                ? pricingCardStyles.titleRegular
-                : pricingCardStyles.title
-            }`}
-          >
-            {title}
-          </h3>
+          <h3 className={pricingCardStyles.title}>{title}</h3>
           <p className={pricingCardStyles.description}>{description}</p>
         </div>
 
         <div className={pricingCardStyles.priceContainer}>
           <div className={pricingCardStyles.priceWrapper}>
-            <span
-              className={`${pricingCardStyles.price} ${
-                isPopular
-                  ? pricingCardStyles.pricePopular
-                  : pricingCardStyles.priceRegular
-              }`}
-            >
-              {price}
-            </span>
-            {period && (
-              <span className={pricingCardStyles.period}>/{period}</span>
-            )}
+            <span className={pricingCardStyles.price}>{price}</span>
+            {period && <span className={pricingCardStyles.period}>/{period}</span>}
           </div>
           {isAnnual && (
             <div className={pricingCardStyles.annualBadge}>Save 20% annually</div>
@@ -66,13 +48,7 @@ const PricingCard = ({
         <ul className={pricingCardStyles.featuresList}>
           {features.map((feature, idx) => (
             <li key={idx} className={pricingCardStyles.featureItem}>
-              <div
-                className={`${pricingCardStyles.featureIcon} ${
-                  isPopular
-                    ? pricingCardStyles.featureIconPopular
-                    : pricingCardStyles.featureIconRegular
-                }`}
-              >
+              <div className={pricingCardStyles.featureIcon}>
                 <svg
                   className="w-3 h-3"
                   fill="none"
@@ -92,25 +68,16 @@ const PricingCard = ({
           ))}
         </ul>
 
-        {/* CTA area */}
         <div style={{ marginTop: 12 }}>
           <SignedIn>
             <button
               type="button"
               onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual })}
               className={`${pricingCardStyles.ctaButton} ${
-                isPopular
-                  ? pricingCardStyles.ctaButtonPopular
-                  : pricingCardStyles.ctaButtonRegular
+                isPopular ? pricingCardStyles.ctaButtonPopular : pricingCardStyles.ctaButtonRegular
               }`}
             >
-              <span
-                className={`${pricingCardStyles.ctaButtonText} ${
-                  isPopular
-                    ? pricingCardStyles.ctaButtonTextPopular
-                    : pricingCardStyles.ctaButtonTextRegular
-                }`}
-              >
+              <span className={pricingCardStyles.ctaButtonText}>
                 {isPopular ? "Get Started" : "Choose Plan"}
               </span>
             </button>
@@ -121,16 +88,11 @@ const PricingCard = ({
               type="button"
               onClick={() =>
                 onCtaClick &&
-                onCtaClick(
-                  { title, isPopular, isAnnual },
-                  { openSignInFallback: true }
-                )
+                onCtaClick({ title, isPopular, isAnnual }, { openSignInFallback: true })
               }
               className={`${pricingCardStyles.ctaButton} ${pricingCardStyles.ctaButtonRegular}`}
             >
-              <span className={pricingCardStyles.ctaButtonText}>
-                Sign in to get started
-              </span>
+              <span className={pricingCardStyles.ctaButtonText}>Sign in to get started</span>
             </button>
           </SignedOut>
         </div>
@@ -172,10 +134,10 @@ const Pricing = () => {
           "Custom branding",
           "Priority support",
           "Advanced analytics",
-          "Team collaboration (3 members)",
+          "Lean collaboration (3 members)",   // changed from "Team collaboration"
           "API access",
         ],
-        isPopular: true,
+        isPopular: true,   // keep badge if you want "Most Popular"
       },
       {
         title: "Enterprise",
@@ -188,7 +150,7 @@ const Pricing = () => {
           "Custom workflows",
           "Dedicated account manager",
           "SLA guarantee",
-          "White-label solutions",
+          "White label solutions",          // removed hyphen
           "Advanced security",
         ],
         isPopular: false,
@@ -221,7 +183,7 @@ const Pricing = () => {
           "Custom branding",
           "Priority support",
           "Advanced analytics",
-          "Team collaboration (3 members)",
+          "Lean collaboration (3 members)",
           "API access",
         ],
         isPopular: true,
@@ -238,7 +200,7 @@ const Pricing = () => {
           "Custom workflows",
           "Dedicated account manager",
           "SLA guarantee",
-          "White-label solutions",
+          "White label solutions",
           "Advanced security",
         ],
         isPopular: false,
@@ -273,11 +235,9 @@ const Pricing = () => {
             <span className={pricingStyles.badgeDot}></span>
             <span className={pricingStyles.badgeText}>Transparent Pricing</span>
           </div>
-
           <h2 className={pricingStyles.title}>
             Simple, <span className={pricingStyles.titleGradient}>Fair</span>
           </h2>
-
           <p className={pricingStyles.description}>
             Start free, upgrade as you grow. No hidden fees, no surprise charges.
           </p>
