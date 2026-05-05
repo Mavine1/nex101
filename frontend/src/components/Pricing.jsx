@@ -247,6 +247,16 @@ const Pricing = () => {
     navigate("/app/create-invoice", { state: { fromPlan: planMeta } });
   };
 
+  // Additional features list (from your snippet)
+  const additionalFeatures = [
+    "Secure cloud storage",
+    "Mobile-friendly interface",
+    "Automatic backups",
+    "Real-time notifications",
+    "Multi-currency support",
+    "Tax calculation",
+  ];
+
   return (
     <section id="pricing" className={pricingStyles.section}>
       <div className={pricingStyles.bgElement1}></div>
@@ -267,7 +277,7 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Centered Billing Toggle – removed bottom margin */}
+        {/* Centered Billing Toggle */}
         <div className="flex justify-center mb-10">
           <div className={pricingStyles.billingToggle}>
             <button
@@ -294,7 +304,7 @@ const Pricing = () => {
           </div>
         </div>
 
-        {/* Pricing Cards Grid – removed top margin */}
+        {/* Pricing Cards Grid */}
         <div className={`${pricingStyles.grid} mt-10`}>
           {currentPlans.map((plan, index) => (
             <PricingCard
@@ -310,6 +320,33 @@ const Pricing = () => {
               onCtaClick={handleCtaClick}
             />
           ))}
+        </div>
+
+        {/* Additional Features Section (from your snippets) */}
+        <div className={pricingStyles.additionalInfo}>
+          <div className={pricingStyles.featuresCard}>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Everything you need to manage invoices
+            </h3>
+            <div className={pricingStyles.featuresGrid}>
+              {additionalFeatures.map((feature, index) => (
+                <div key={index} className={pricingStyles.featureItem}>
+                  <div className={pricingStyles.featureDot}></div>
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ CTA Section */}
+        <div className={pricingStyles.faqCta}>
+          <p className={pricingStyles.faqText}>
+            Have questions about pricing?{" "}
+            <button className={pricingStyles.contactLink}>
+              Contact our sales team
+            </button>
+          </p>
         </div>
       </div>
     </section>
