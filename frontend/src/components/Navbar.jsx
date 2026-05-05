@@ -1,29 +1,108 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useUser, useAuth, useClerk, SignedOut, SignedIn } from "@clerk/clerk-react";
+import {
+  useUser,
+  useAuth,
+  useClerk,
+  SignedOut,
+  SignedIn,
+} from "@clerk/clerk-react";
 import { navbarStyles } from "../assets/dummyStyles";
 import logo from "../assets/logo.png";
 
 const Navbar = () => {
+  // State
   const [open, setOpen] = useState(false);           // mobile menu
   const [profileOpen, setProfileOpen] = useState(false);
+
+  // Clerk hooks
   const { user } = useUser();
   const { getToken, isSignedIn } = useAuth();
   const clerk = useClerk();
   const navigate = useNavigate();
+
+  // Refs
   const profileRef = useRef(null);
   const TOKEN_KEY = "token";
 
-  // Open sign‑in modal
+  // ---------- Token handling ----------
+  const fetchAndStoreToken = useCallback(
+    async (options = {}) => {
+      try {
+        if (!getToken) return null;
+        const token = await getToken(options).catch(() => null);
+        if (token) {
+          try {
+            localStorage.setItem(TOKEN_KEY, token);
+            console.log("Token stored:", token.substring(0, 20) + "...");
+          } catch (e) {
+            console.warn("Failed to store token", e);
+          }
+        }
+        return token;
+      } catch (error) {
+        console.error("fetchAndStoreToken error:", error);
+        return null;
+      }
+    },
+    [getToken]
+  );
+
+  // Keep localStorage token in sync with Clerk auth state
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (isSignedIn) {
+        let token = await fetchAndStoreToken({ template: "default" }).catch(
+          () => null
+        );
+        if (!token && mounted) {
+          token = await fetchAndStoreToken({ forceRefresh: true }).catch(
+            () => null
+          );
+        }
+      } else {
+        try {
+          localStorage.removeItem(TOKEN_KEY);
+        } catch (e) {
+          console.warn("Failed to remove token", e);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isSignedIn, fetchAndStoreToken]);
+
+  // ---------- Redirect after login ----------
+  useEffect(() => {
+    if (isSignedIn) {
+      const pathname = window.location.pathname;
+      const isAuthPage =
+        pathname === "/login" ||
+        pathname === "/signup" ||
+        pathname.startsWith("/auth") ||
+        pathname === "/";
+      if (isAuthPage) {
+        navigate("/app/dashboard", { replace: true });
+      }
+    }
+  }, [isSignedIn, navigate]);
+
+  // ---------- Auth modal functions ----------
   const openSignIn = () => {
-    if (clerk && typeof clerk.openSignIn === "function") {
-      clerk.openSignIn({ redirectUrl: "/" });
-    } else {
+    try {
+      if (clerk && typeof clerk.openSignIn === "function") {
+        clerk.openSignIn({ redirectUrl: "/" });
+      } else {
+        navigate("/sign-in");
+      }
+    } catch (e) {
+      console.error("openSignIn failed:", e);
       navigate("/sign-in");
     }
   };
 
-  // Open sign‑up modal
   const openSignUp = () => {
     try {
       if (clerk && typeof clerk.openSignUp === "function") {
@@ -37,7 +116,7 @@ const Navbar = () => {
     }
   };
 
-  // Close profile dropdown when clicking outside
+  // ---------- Close profile dropdown on outside click ----------
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -54,11 +133,12 @@ const Navbar = () => {
     };
   }, [profileOpen]);
 
+  // ---------- Render ----------
   return (
     <header className={navbarStyles.header}>
       <div className={navbarStyles.container}>
         <nav className={navbarStyles.nav}>
-          {/* Logo Section */}
+          {/* Logo */}
           <div className={navbarStyles.logoSection}>
             <Link to="/" className={navbarStyles.logoLink}>
               <img src={logo} alt="logo" className={navbarStyles.logoImage} />
@@ -76,7 +156,7 @@ const Navbar = () => {
             </a>
           </div>
 
-          {/* Auth Section (Desktop) */}
+          {/* Desktop Auth Section */}
           <div className={navbarStyles.authSection}>
             <SignedOut>
               <button
@@ -103,7 +183,9 @@ const Navbar = () => {
                   className={navbarStyles.userAvatar}
                   type="button"
                 >
-                  {user?.firstName?.[0] || user?.emailAddresses?.[0]?.emailAddress?.[0] || "U"}
+                  {user?.firstName?.[0] ||
+                    user?.emailAddresses?.[0]?.emailAddress?.[0] ||
+                    "U"}
                 </button>
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border">
@@ -131,7 +213,7 @@ const Navbar = () => {
             </SignedIn>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button (Hamburger) */}
           <button
             className={navbarStyles.mobileMenuButton}
             onClick={() => setOpen(!open)}
@@ -164,7 +246,9 @@ const Navbar = () => {
         </nav>
 
         {/* Mobile Menu Panel */}
-        <div className={`${open ? "block" : "hidden"} ${navbarStyles.mobileMenu}`}>
+        <div
+          className={`${open ? "block" : "hidden"} ${navbarStyles.mobileMenu}`}
+        >
           <div className={navbarStyles.mobileMenuContainer}>
             <a
               href="#features"
@@ -221,29 +305,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-// useEffect(() => {
-//   function onDocClick(e) {
-//     if (!profileRef.current) return;
-//     if (!profileRef.current.contains(e.target)) {
-//       setProfileOpen(false);
-//     }
-//   }
-//   if (profileOpen) {
-//     document.addEventListener("mousedown", onDocClick);
-//     document.addEventListener("touchstart", onDocClick);
-//   }
-//   return () => {
-//     document.removeEventListener("mousedown", onDocClick);
-//     document.removeEventListener("touchstart", onDocClick);
-//   };
-// }, [profileOpen]);
-
-// <svg
-//   className={navbarStyles.signUpIcon}
-//   viewBox="0 0 24 24"
-//   fill="none"
-//   stroke="currentColor"
-//   strokeWidth="2"
-// >
-//   <path d="M5 12h14m-7-7l7 7-7 7" />
-// </svg>;
