@@ -16,7 +16,6 @@ const FeatureCard = ({ title, desc, icon, delay = 0 }) => {
           <p className={featuresStyles.featureCardDescription}>{desc}</p>
         </div>
       </div>
-      {/* Subtle CTA indicator */}
       <div className={featuresStyles.featureCardCta}>
         <span className={featuresStyles.featureCardCtaText}>Learn more</span>
         <svg
@@ -105,7 +104,7 @@ const Features = () => {
   ];
 
   return (
-    <section className={featuresStyles.section}>
+    <section id="features" className={featuresStyles.section}>   {/* ← ADDED id="features" */}
       <div className={featuresStyles.container}>
         <div className={featuresStyles.header}>
           <div className={featuresStyles.badge}>
@@ -113,8 +112,7 @@ const Features = () => {
             <span className={featuresStyles.badgeText}>Powerful Features</span>
           </div>
           <h2 className={featuresStyles.title}>
-            Built for{" "}
-            <span className={featuresStyles.titleGradient}>Speed & Clarity</span>
+            Built for <span className={featuresStyles.titleGradient}>Speed & Clarity</span>
           </h2>
           <p className={featuresStyles.subtitle}>
             A minimal, intelligent interface that focuses on what truly matters — create, send, and track invoices effortlessly.
@@ -133,12 +131,9 @@ const Features = () => {
           ))}
         </div>
 
-        {/* Bottom CTA */}
         <div className={featuresStyles.bottomCtaContainer}>
           <button className={featuresStyles.bottomCtaButton}>
-            <span className={featuresStyles.bottomCtaButtonText}>
-              Explore All Features
-            </span>
+            <span className={featuresStyles.bottomCtaButtonText}>Explore All Features</span>
             <svg
               className={featuresStyles.bottomCtaButtonIcon}
               fill="none"
