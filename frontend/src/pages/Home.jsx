@@ -6,9 +6,6 @@ const Home = () => {
   return (
     <>
       <Navbar />
-      <div className="bg-blue-500 text-white p-4">
-  If this is blue, Tailwind works
-</div>
     </>
   );
 };
