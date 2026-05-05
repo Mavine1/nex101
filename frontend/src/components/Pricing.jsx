@@ -287,8 +287,8 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Centered Billing Toggle */}
-        <div className="flex justify-center">
+        {/* Centered Billing Toggle - moved up with reduced bottom margin */}
+        <div className="flex justify-center mb-4">
           <div className={pricingStyles.billingToggle}>
             <button
               onClick={() => setBillingPeriod("monthly")}
@@ -314,8 +314,8 @@ const Pricing = () => {
           </div>
         </div>
 
-        {/* Pricing Cards Grid - horizontal on large screens */}
-        <div className={pricingStyles.grid}>
+        {/* Pricing Cards Grid - increased gap between cards */}
+        <div className={`${pricingStyles.grid} gap-8`}>
           {currentPlans.map((plan, index) => (
             <PricingCard
               key={plan.title}
