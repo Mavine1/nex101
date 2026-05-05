@@ -34,6 +34,12 @@ const Hero = () => {
     { icon: "🎨", label: "Professional", desc: "Branded templates" },
   ];
 
+  // Calculate tax and total
+  const subtotal = 20500;
+  const taxRate = 0.16; // 16% VAT
+  const taxAmount = subtotal * taxRate; // KSh 3,280
+  const total = subtotal + taxAmount; // KSh 23,780
+
   return (
     <section className={heroStyles.section}>
       {/* Background decorative elements */}
@@ -195,31 +201,31 @@ const Hero = () => {
                   ))}
                 </div>
 
-                {/* Calculation Section */}
+                {/* Calculation Section with 16% Kenyan VAT */}
                 <div className={heroStyles.calculationContainer}>
                   <div className={heroStyles.calculationRow}>
                     <span className={heroStyles.calculationLabel}>
                       Subtotal
                     </span>
                     <span className={heroStyles.calculationValue}>
-                      KSh 20,500
+                      KSh {subtotal.toLocaleString()}
                     </span>
                   </div>
                   <div className={heroStyles.calculationRow}>
                     <span className={heroStyles.calculationLabel}>
-                      GST (18%)
+                      VAT (16%)
                     </span>
                     <span className={heroStyles.calculationValue}>
-                      KSh 3,240
+                      KSh {taxAmount.toLocaleString()}
                     </span>
                   </div>
                   <div className={heroStyles.totalRow}>
                     <span className={heroStyles.totalLabel}>Total Amount</span>
-                    <span className={heroStyles.totalValue}>KSh 23,740</span>
+                    <span className={heroStyles.totalValue}>
+                      KSh {total.toLocaleString()}
+                    </span>
                   </div>
                 </div>
-
-                {/* AI Indicator - REMOVED as requested */}
               </div>
             </div>
           </div>
