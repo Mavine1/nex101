@@ -14,6 +14,7 @@ const Navbar = () => {
   // State
   const [open, setOpen] = useState(false);           // mobile menu
   const [profileOpen, setProfileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState(""); // "features" or "pricing"
 
   // Clerk hooks
   const { user } = useUser();
@@ -89,6 +90,42 @@ const Navbar = () => {
     }
   }, [isSignedIn, navigate]);
 
+  // ---------- Intersection Observer for active section ----------
+  useEffect(() => {
+    const sections = document.querySelectorAll("section[id]");
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.4, rootMargin: "-80px 0px -40% 0px" }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+
+    return () => {
+      sections.forEach((section) => observer.unobserve(section));
+    };
+  }, []);
+
+  // ---------- Smooth scroll to section ----------
+  const scrollToSection = (sectionId, e) => {
+    e.preventDefault();
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+      setActiveSection(sectionId);
+      // Update URL hash without jumping
+      window.history.pushState(null, "", `#${sectionId}`);
+    }
+    setOpen(false); // close mobile menu if open
+  };
+
   // ---------- Auth modal functions ----------
   const openSignIn = () => {
     try {
@@ -148,10 +185,22 @@ const Navbar = () => {
 
           {/* Desktop Navigation Links */}
           <div className={navbarStyles.desktopNav}>
-            <a href="#features" className={navbarStyles.navLink}>
+            <a
+              href="#features"
+              onClick={(e) => scrollToSection("features", e)}
+              className={`${navbarStyles.navLink} ${
+                activeSection === "features" ? navbarStyles.navLinkActive : ""
+              }`}
+            >
               Features
             </a>
-            <a href="#pricing" className={navbarStyles.navLinkInactive}>
+            <a
+              href="#pricing"
+              onClick={(e) => scrollToSection("pricing", e)}
+              className={`${navbarStyles.navLink} ${
+                activeSection === "pricing" ? navbarStyles.navLinkActive : ""
+              }`}
+            >
               Pricing
             </a>
           </div>
@@ -252,15 +301,19 @@ const Navbar = () => {
           <div className={navbarStyles.mobileMenuContainer}>
             <a
               href="#features"
-              className={navbarStyles.mobileNavLink}
-              onClick={() => setOpen(false)}
+              onClick={(e) => scrollToSection("features", e)}
+              className={`${navbarStyles.mobileNavLink} ${
+                activeSection === "features" ? navbarStyles.mobileNavLinkActive : ""
+              }`}
             >
               Features
             </a>
             <a
               href="#pricing"
-              className={navbarStyles.mobileNavLink}
-              onClick={() => setOpen(false)}
+              onClick={(e) => scrollToSection("pricing", e)}
+              className={`${navbarStyles.mobileNavLink} ${
+                activeSection === "pricing" ? navbarStyles.mobileNavLinkActive : ""
+              }`}
             >
               Pricing
             </a>
