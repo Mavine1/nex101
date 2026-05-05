@@ -4,6 +4,10 @@ import { navbarStyles } from "../assets/dummyStyles";
 import logo from "../assets/logo.png";
 
 const Navbar = () => {
+  // Debug logs: check if imports are working
+  console.log("navbarStyles:", navbarStyles);
+  console.log("logo path:", logo);
+
   return (
     <header className={navbarStyles.header}>
       <div className={navbarStyles.container}>
