@@ -119,7 +119,9 @@ const AppShell = () => {
   useEffect(() => {
     try {
       localStorage.setItem("sidebar_collapsed", collapsed ? "true" : "false");
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [collapsed]);
 
   // Lock body scroll when mobile drawer is open
