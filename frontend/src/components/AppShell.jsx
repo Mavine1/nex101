@@ -87,11 +87,13 @@ const SidebarLink = ({ to, icon, children, collapsed, setMobileOpen }) => (
     )}
   </NavLink>
 );
+
 // ----- Main AppShell component -----
 const AppShell = () => {
   const navigate = useNavigate();
   const { user } = useUser();
   const { signOut } = useClerk();
+
   // Sidebar state
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -102,6 +104,7 @@ const AppShell = () => {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
   // Responsive: auto‑collapse on mobile
   useEffect(() => {
     const checkScreenSize = () => {
@@ -118,7 +121,7 @@ const AppShell = () => {
     try {
       localStorage.setItem("sidebar_collapsed", collapsed ? "true" : "false");
     } catch {
-      // Ignore errors when localStorage is not available
+      // ignore
     }
   }, [collapsed]);
 
@@ -264,6 +267,16 @@ const AppShell = () => {
               </div>
             </div>
             <div className={appShellStyles.headerActions}>
+              {/* ✅ NEW: Create Invoice button */}
+              <button
+                onClick={() => navigate("/app/create-invoice")}
+                className={appShellStyles.ctaButton}
+              >
+                <CreateIcon className={appShellStyles.ctaIcon} />
+                <span className="hidden xs:inline">Create Invoice</span>
+                <span className="xs:hidden">Create</span>
+              </button>
+
               <div className={appShellStyles.userSectionDesktop}>
                 <div className={appShellStyles.userInfo}>
                   <p className={appShellStyles.userName}>{displayName}</p>
