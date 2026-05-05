@@ -1,11 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";   // ← add this import
+import { BrowserRouter } from "react-router-dom";  
 import { ClerkProvider } from "@clerk/clerk-react";
 import App from "./App.jsx";
 import "./index.css";
 
-// Your Clerk publishable key from environment variables
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
@@ -13,15 +12,11 @@ if (!PUBLISHABLE_KEY) {
     "Missing Clerk Publishable Key. Please add VITE_CLERK_PUBLISHABLE_KEY to your .env file"
   );
 }
-
-// Get the root DOM element
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
   throw new Error("Root element with id 'root' not found in the document");
 }
-
-// Render the application with Clerk provider, Router, and StrictMode
 createRoot(rootElement).render(
   <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
     <BrowserRouter>                 {/* ← wrap here */}
