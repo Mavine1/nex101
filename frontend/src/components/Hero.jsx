@@ -21,11 +21,11 @@ const Hero = () => {
     }
   };
 
-  // Demo data for the invoice preview card
+  // Demo data for the invoice preview card (Kenyan Shillings)
   const invoiceItems = [
-    { description: "Website Design & Development", amount: "₹15,000" },
-    { description: "Consultation (2 hours)", amount: "₹3,000" },
-    { description: "Premium Hosting Setup", amount: "₹2,500" },
+    { description: "Website Design & Development", amount: "KSh 15,000" },
+    { description: "Consultation (2 hours)", amount: "KSh 3,000" },
+    { description: "Premium Hosting Setup", amount: "KSh 2,500" },
   ];
 
   const features = [
@@ -166,7 +166,7 @@ const Hero = () => {
                     <div className={heroStyles.cardLogo}>AI</div>
                   </div>
                   <div className={heroStyles.cardClientName}>
-                    Acme Corporation
+                    NEX101
                   </div>
                 </div>
 
@@ -202,7 +202,7 @@ const Hero = () => {
                       Subtotal
                     </span>
                     <span className={heroStyles.calculationValue}>
-                      ₹20,500
+                      KSh 20,500
                     </span>
                   </div>
                   <div className={heroStyles.calculationRow}>
@@ -210,25 +210,16 @@ const Hero = () => {
                       GST (18%)
                     </span>
                     <span className={heroStyles.calculationValue}>
-                      ₹3,240
+                      KSh 3,240
                     </span>
                   </div>
                   <div className={heroStyles.totalRow}>
                     <span className={heroStyles.totalLabel}>Total Amount</span>
-                    <span className={heroStyles.totalValue}>₹23,740</span>
+                    <span className={heroStyles.totalValue}>KSh 23,740</span>
                   </div>
                 </div>
 
-                {/* AI Indicator */}
-                <div className={heroStyles.aiIndicator}>
-                  <div className={heroStyles.aiIndicatorContent}>
-                    <div className={heroStyles.aiIndicatorDot}></div>
-                    <span>AI parsed from: </span>
-                    <span className={heroStyles.aiIndicatorText}>
-                      "Invoice for web design - ₹15,000 + Consultation ₹3,000"
-                    </span>
-                  </div>
-                </div>
+                {/* AI Indicator - REMOVED as requested */}
               </div>
             </div>
           </div>
