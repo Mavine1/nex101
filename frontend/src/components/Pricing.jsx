@@ -31,9 +31,11 @@ const PricingCard = ({
 
       <div className={pricingCardStyles.content}>
         <div className={pricingCardStyles.header}>
-          <h3 className={`${pricingCardStyles.title} ${
-            isPopular ? pricingCardStyles.titlePopular : pricingCardStyles.titleRegular
-          }`}>
+          <h3
+            className={`${pricingCardStyles.title} ${
+              isPopular ? pricingCardStyles.titlePopular : pricingCardStyles.titleRegular
+            }`}
+          >
             {title}
           </h3>
           <p className={pricingCardStyles.description}>{description}</p>
@@ -41,9 +43,11 @@ const PricingCard = ({
 
         <div className={pricingCardStyles.priceContainer}>
           <div className={pricingCardStyles.priceWrapper}>
-            <span className={`${pricingCardStyles.price} ${
-              isPopular ? pricingCardStyles.pricePopular : pricingCardStyles.priceRegular
-            }`}>
+            <span
+              className={`${pricingCardStyles.price} ${
+                isPopular ? pricingCardStyles.pricePopular : pricingCardStyles.priceRegular
+              }`}
+            >
               {price}
             </span>
             {period && <span className={pricingCardStyles.period}>/{period}</span>}
@@ -56,11 +60,20 @@ const PricingCard = ({
         <ul className={pricingCardStyles.featuresList}>
           {features.map((feature, idx) => (
             <li key={idx} className={pricingCardStyles.featureItem}>
-              <div className={`${pricingCardStyles.featureIcon} ${
-                isPopular ? pricingCardStyles.featureIconPopular : pricingCardStyles.featureIconRegular
-              }`}>
+              <div
+                className={`${pricingCardStyles.featureIcon} ${
+                  isPopular
+                    ? pricingCardStyles.featureIconPopular
+                    : pricingCardStyles.featureIconRegular
+                }`}
+              >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               <span className={pricingCardStyles.featureText}>{feature}</span>
@@ -74,12 +87,18 @@ const PricingCard = ({
               type="button"
               onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual })}
               className={`${pricingCardStyles.ctaButton} ${
-                isPopular ? pricingCardStyles.ctaButtonPopular : pricingCardStyles.ctaButtonRegular
+                isPopular
+                  ? pricingCardStyles.ctaButtonPopular
+                  : pricingCardStyles.ctaButtonRegular
               }`}
             >
-              <span className={`${pricingCardStyles.ctaButtonText} ${
-                isPopular ? pricingCardStyles.ctaButtonTextPopular : pricingCardStyles.ctaButtonTextRegular
-              }`}>
+              <span
+                className={`${pricingCardStyles.ctaButtonText} ${
+                  isPopular
+                    ? pricingCardStyles.ctaButtonTextPopular
+                    : pricingCardStyles.ctaButtonTextRegular
+                }`}
+              >
                 {isPopular ? "Get Started" : "Choose Plan"}
               </span>
             </button>
@@ -88,7 +107,13 @@ const PricingCard = ({
           <SignedOut>
             <button
               type="button"
-              onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual }, { openSignInFallback: true })}
+              onClick={() =>
+                onCtaClick &&
+                onCtaClick(
+                  { title, isPopular, isAnnual },
+                  { openSignInFallback: true }
+                )
+              }
               className={`${pricingCardStyles.ctaButton} ${pricingCardStyles.ctaButtonRegular}`}
             >
               <span className={pricingCardStyles.ctaButtonText}>Sign in to get started</span>
@@ -133,7 +158,7 @@ const Pricing = () => {
           "Custom branding",
           "Priority support",
           "Advanced analytics",
-          "Lean collaboration (3 members)",
+          "Team collaboration (3 members)",   // exact as requested
           "API access",
         ],
         isPopular: true,
@@ -149,7 +174,7 @@ const Pricing = () => {
           "Custom workflows",
           "Dedicated account manager",
           "SLA guarantee",
-          "White label solutions",
+          "White-label solutions",            // hyphenated as requested
           "Advanced security",
         ],
         isPopular: false,
@@ -182,7 +207,7 @@ const Pricing = () => {
           "Custom branding",
           "Priority support",
           "Advanced analytics",
-          "Lean collaboration (3 members)",
+          "Team collaboration (3 members)",
           "API access",
         ],
         isPopular: true,
@@ -199,7 +224,7 @@ const Pricing = () => {
           "Custom workflows",
           "Dedicated account manager",
           "SLA guarantee",
-          "White label solutions",
+          "White-label solutions",
           "Advanced security",
         ],
         isPopular: false,
@@ -242,7 +267,7 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Centered Billing Toggle – using your original gap (no extra mb added) */}
+        {/* Centered Billing Toggle */}
         <div className="flex justify-center">
           <div className={pricingStyles.billingToggle}>
             <button
@@ -269,7 +294,7 @@ const Pricing = () => {
           </div>
         </div>
 
-        {/* Pricing Cards Grid – using your original grid gap (no extra gap-8) */}
+        {/* Horizontal Pricing Grid */}
         <div className={pricingStyles.grid}>
           {currentPlans.map((plan, index) => (
             <PricingCard
