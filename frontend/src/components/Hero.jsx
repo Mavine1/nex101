@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useClerk, SignedIn, SignedOut } from "@clerk/clerk-react";
-import { heroStyles } from "./assets/dummyStyles";
+import { heroStyles } from "../assets/dummyStyles";
 
 const Hero = () => {
   const navigate = useNavigate();
