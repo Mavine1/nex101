@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";   // ← add this import
 import { ClerkProvider } from "@clerk/clerk-react";
 import App from "./App.jsx";
 import "./index.css";
@@ -20,11 +21,13 @@ if (!rootElement) {
   throw new Error("Root element with id 'root' not found in the document");
 }
 
-// Render the application with Clerk provider and StrictMode
+// Render the application with Clerk provider, Router, and StrictMode
 createRoot(rootElement).render(
   <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-    <StrictMode>
-      <App />
-    </StrictMode>
+    <BrowserRouter>                 {/* ← wrap here */}
+      <StrictMode>
+        <App />
+      </StrictMode>
+    </BrowserRouter>
   </ClerkProvider>
 );
