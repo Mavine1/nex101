@@ -1,5 +1,15 @@
+import React from 'react'
 
+const Features = () => {
+  return (
+    <div>
+      <h2>Features Section</h2>
+      {/* Your feature content */}
+    </div>
+  )
+}
 
+export default Features
   //       {/* Subtle CTA indicator */}
   //       <div className={featuresStyles.featureCardCta}>
   //         <span className={featuresStyles.featureCardCtaText}>Learn more</span>
