@@ -23,9 +23,7 @@ const PricingCard = ({
     >
       {isPopular && (
         <div className={pricingCardStyles.popularBadge}>
-          <div className={pricingCardStyles.popularBadgeContent}>
-            Most Popular
-          </div>
+          <div className={pricingCardStyles.popularBadgeContent}>Most Popular</div>
         </div>
       )}
       {isPopular && <div className={pricingCardStyles.gradientOverlay} />}
@@ -33,13 +31,9 @@ const PricingCard = ({
 
       <div className={pricingCardStyles.content}>
         <div className={pricingCardStyles.header}>
-          <h3
-            className={`${
-              isPopular
-                ? pricingCardStyles.titlePopular
-                : pricingCardStyles.titleRegular
-            } ${pricingCardStyles.title}`}
-          >
+          <h3 className={`${pricingCardStyles.title} ${
+            isPopular ? pricingCardStyles.titlePopular : pricingCardStyles.titleRegular
+          }`}>
             {title}
           </h3>
           <p className={pricingCardStyles.description}>{description}</p>
@@ -47,48 +41,26 @@ const PricingCard = ({
 
         <div className={pricingCardStyles.priceContainer}>
           <div className={pricingCardStyles.priceWrapper}>
-            <span
-              className={`${pricingCardStyles.price} ${
-                isPopular
-                  ? pricingCardStyles.pricePopular
-                  : pricingCardStyles.priceRegular
-              }`}
-            >
+            <span className={`${pricingCardStyles.price} ${
+              isPopular ? pricingCardStyles.pricePopular : pricingCardStyles.priceRegular
+            }`}>
               {price}
             </span>
-            {period && (
-              <span className={pricingCardStyles.period}>/{period}</span>
-            )}
+            {period && <span className={pricingCardStyles.period}>/{period}</span>}
           </div>
           {isAnnual && (
-            <div className={pricingCardStyles.annualBadge}>
-              Save 20% annually
-            </div>
+            <div className={pricingCardStyles.annualBadge}>Save 20% annually</div>
           )}
         </div>
 
         <ul className={pricingCardStyles.featuresList}>
           {features.map((feature, idx) => (
             <li key={idx} className={pricingCardStyles.featureItem}>
-              <div
-                className={`${pricingCardStyles.featureIcon} ${
-                  isPopular
-                    ? pricingCardStyles.featureIconPopular
-                    : pricingCardStyles.featureIconRegular
-                }`}
-              >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M5 13l4 4L19 7"
-                  />
+              <div className={`${pricingCardStyles.featureIcon} ${
+                isPopular ? pricingCardStyles.featureIconPopular : pricingCardStyles.featureIconRegular
+              }`}>
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <span className={pricingCardStyles.featureText}>{feature}</span>
@@ -102,18 +74,12 @@ const PricingCard = ({
               type="button"
               onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual })}
               className={`${pricingCardStyles.ctaButton} ${
-                isPopular
-                  ? pricingCardStyles.ctaButtonPopular
-                  : pricingCardStyles.ctaButtonRegular
+                isPopular ? pricingCardStyles.ctaButtonPopular : pricingCardStyles.ctaButtonRegular
               }`}
             >
-              <span
-                className={`${pricingCardStyles.ctaButtonText} ${
-                  isPopular
-                    ? pricingCardStyles.ctaButtonTextPopular
-                    : pricingCardStyles.ctaButtonTextRegular
-                }`}
-              >
+              <span className={`${pricingCardStyles.ctaButtonText} ${
+                isPopular ? pricingCardStyles.ctaButtonTextPopular : pricingCardStyles.ctaButtonTextRegular
+              }`}>
                 {isPopular ? "Get Started" : "Choose Plan"}
               </span>
             </button>
@@ -122,18 +88,10 @@ const PricingCard = ({
           <SignedOut>
             <button
               type="button"
-              onClick={() =>
-                onCtaClick &&
-                onCtaClick(
-                  { title, isPopular, isAnnual },
-                  { openSignInFallback: true }
-                )
-              }
+              onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual }, { openSignInFallback: true })}
               className={`${pricingCardStyles.ctaButton} ${pricingCardStyles.ctaButtonRegular}`}
             >
-              <span className={pricingCardStyles.ctaButtonText}>
-                Sign in to get started
-              </span>
+              <span className={pricingCardStyles.ctaButtonText}>Sign in to get started</span>
             </button>
           </SignedOut>
         </div>
@@ -274,21 +232,18 @@ const Pricing = () => {
         <div className={pricingStyles.headerContainer}>
           <div className={pricingStyles.badge}>
             <span className={pricingStyles.badgeDot}></span>
-            <span className={pricingStyles.badgeText}>
-              Transparent Pricing
-            </span>
+            <span className={pricingStyles.badgeText}>Transparent Pricing</span>
           </div>
           <h2 className={pricingStyles.title}>
             Simple, <span className={pricingStyles.titleGradient}>Fair</span>
           </h2>
           <p className={pricingStyles.description}>
-            Start free, upgrade as you grow. No hidden fees, no surprise
-            charges.
+            Start free, upgrade as you grow. No hidden fees, no surprise charges.
           </p>
         </div>
 
-        {/* Centered Billing Toggle - moved up with reduced bottom margin */}
-        <div className="flex justify-center mb-4">
+        {/* Centered Billing Toggle – using your original gap (no extra mb added) */}
+        <div className="flex justify-center">
           <div className={pricingStyles.billingToggle}>
             <button
               onClick={() => setBillingPeriod("monthly")}
@@ -314,8 +269,8 @@ const Pricing = () => {
           </div>
         </div>
 
-        {/* Pricing Cards Grid - increased gap between cards */}
-        <div className={`${pricingStyles.grid} gap-8`}>
+        {/* Pricing Cards Grid – using your original grid gap (no extra gap-8) */}
+        <div className={pricingStyles.grid}>
           {currentPlans.map((plan, index) => (
             <PricingCard
               key={plan.title}
