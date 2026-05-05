@@ -6,10 +6,12 @@ import {
   RedirectToSignIn,
 } from "@clerk/clerk-react";
 import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard"; // create this page
+import AppShell from "./components/AppShell";
+import Dashboard from "./pages/Dashboard";
 
-// Protected route wrapper component
-const ProtectedRoute = ({ children }) => {
+// Protected route wrapper – renders children only when signed in,
+// otherwise redirects to Clerk's sign‑in page.
+const ClerkProtected = ({ children }) => {
   return (
     <>
       <SignedIn>{children}</SignedIn>
@@ -22,23 +24,30 @@ const ProtectedRoute = ({ children }) => {
 
 const App = () => {
   return (
-    <Routes>
-      {/* Public route */}
-      <Route path="/" element={<Home />} />
+    <div className="min-h-screen max-w-full overflow-x-hidden">
+      <Routes>
+        {/* Public route */}
+        <Route path="/" element={<Home />} />
 
-      {/* Protected route – only visible when signed in */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+        {/* Protected section */}
+        <Route
+          path="/app"
+          element={
+            <ClerkProtected>
+              <AppShell />
+            </ClerkProtected>
+          }
+        >
+          {/* Index route – renders when path is exactly /app */}
+          <Route index element={<Dashboard />} />
+          {/* Explicit /app/dashboard route */}
+          <Route path="dashboard" element={<Dashboard />} />
+        </Route>
 
-      {/* Optional: catch-all 404 route */}
-      {/* <Route path="*" element={<NotFound />} /> */}
-    </Routes>
+        {/* Optional: catch‑all 404 route */}
+        {/* <Route path="*" element={<NotFound />} /> */}
+      </Routes>
+    </div>
   );
 };
 
