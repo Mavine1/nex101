@@ -5,7 +5,7 @@ const Home = () => {
   return (
     <>
       <Navbar />
-      <div>I</div>
+      <div className="bg-red-500 text-white p-4">Test Tailwind</div>
     </>
   );
 };
