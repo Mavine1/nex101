@@ -87,13 +87,11 @@ const SidebarLink = ({ to, icon, children, collapsed, setMobileOpen }) => (
     )}
   </NavLink>
 );
-
 // ----- Main AppShell component -----
 const AppShell = () => {
   const navigate = useNavigate();
   const { user } = useUser();
   const { signOut } = useClerk();
-
   // Sidebar state
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -104,7 +102,6 @@ const AppShell = () => {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-
   // Responsive: auto‑collapse on mobile
   useEffect(() => {
     const checkScreenSize = () => {
@@ -120,7 +117,9 @@ const AppShell = () => {
   useEffect(() => {
     try {
       localStorage.setItem("sidebar_collapsed", collapsed ? "true" : "false");
-    } catch {}
+    } catch {
+      // Ignore errors when localStorage is not available
+    }
   }, [collapsed]);
 
   // Lock body scroll when mobile drawer is open
