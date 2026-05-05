@@ -4,6 +4,90 @@ import { useUser, useClerk } from "@clerk/clerk-react";
 import { appShellStyles } from "../assets/dummyStyles";
 import logo from "../assets/logo.png";
 
+// ----- Icons (declared outside component to avoid recreation on render) -----
+const DashboardIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+const InvoiceIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10 9 9 9 8 9" />
+  </svg>
+);
+
+const CreateIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="16" />
+    <line x1="8" y1="12" x2="16" y2="12" />
+  </svg>
+);
+
+const ProfileIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const LogoutIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
+const CollapseIcon = ({ className = "w-4 h-4", collapsed }) => (
+  <svg
+    className={`${className} transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+  </svg>
+);
+
+// ----- SidebarLink component (declared outside to avoid recreation on render) -----
+const SidebarLink = ({ to, icon, children, collapsed, setMobileOpen }) => (
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
+      `${appShellStyles.sidebarLink} ${collapsed ? appShellStyles.sidebarLinkCollapsed : ""} ${
+        isActive ? appShellStyles.sidebarLinkActive : appShellStyles.sidebarLinkInactive
+      }`
+    }
+    onClick={() => setMobileOpen(false)}
+  >
+    {({ isActive }) => (
+      <>
+        <div
+          className={`${appShellStyles.sidebarIcon} ${
+            isActive ? appShellStyles.sidebarIconActive : appShellStyles.sidebarIconInactive
+          }`}
+        >
+          {icon}
+        </div>
+        {!collapsed && (
+          <>
+            <span className={appShellStyles.sidebarText}>{children}</span>
+            {isActive && <div className={appShellStyles.sidebarActiveIndicator} />}
+          </>
+        )}
+      </>
+    )}
+  </NavLink>
+);
+
 const AppShell = () => {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -19,13 +103,11 @@ const AppShell = () => {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   // Check screen size for responsive behavior
   useEffect(() => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
       if (mobile) setCollapsed(false);
     };
     checkScreenSize();
@@ -80,89 +162,7 @@ const AppShell = () => {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   })();
 
-  // ----- Icons -----
-  const DashboardIcon = ({ className = "w-5 h-5" }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
 
-  const InvoiceIcon = ({ className = "w-5 h-5" }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-      <polyline points="10 9 9 9 8 9" />
-    </svg>
-  );
-
-  const CreateIcon = ({ className = "w-5 h-5" }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="16" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-    </svg>
-  );
-
-  const ProfileIcon = ({ className = "w-5 h-5" }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-
-  const LogoutIcon = ({ className = "w-5 h-5" }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  );
-
-  const CollapseIcon = ({ className = "w-4 h-4", collapsed }) => (
-    <svg
-      className={`${className} transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-    </svg>
-  );
-
-  // ----- SidebarLink component -----
-  const SidebarLink = ({ to, icon, children }) => (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `${appShellStyles.sidebarLink} ${collapsed ? appShellStyles.sidebarLinkCollapsed : ""} ${
-          isActive ? appShellStyles.sidebarLinkActive : appShellStyles.sidebarLinkInactive
-        }`
-      }
-      onClick={() => setMobileOpen(false)}
-    >
-      {({ isActive }) => (
-        <>
-          <div
-            className={`${appShellStyles.sidebarIcon} ${
-              isActive ? appShellStyles.sidebarIconActive : appShellStyles.sidebarIconInactive
-            }`}
-          >
-            {icon}
-          </div>
-          {!collapsed && (
-            <>
-              <span className={appShellStyles.sidebarText}>{children}</span>
-              {isActive && <div className={appShellStyles.sidebarActiveIndicator} />}
-            </>
-          )}
-        </>
-      )}
-    </NavLink>
-  );
 
   return (
     <div className={appShellStyles.root}>
