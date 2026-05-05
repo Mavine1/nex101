@@ -18,6 +18,16 @@ const Navbar = () => {
               <span className={navbarStyles.logoText}>InvoiceAI</span>
             </Link>
           </div>
+
+          {/* Desktop Navigation Links */}
+          <div className={navbarStyles.desktopNav}>
+            <a href="#features" className={navbarStyles.navLink}>
+              Features
+            </a>
+            <a href="#pricing" className={navbarStyles.navLinkInactive}>
+              Pricing
+            </a>
+          </div>
         </nav>
       </div>
     </header>
