@@ -48,7 +48,13 @@ const PricingCard = ({
         <ul className={pricingCardStyles.featuresList}>
           {features.map((feature, idx) => (
             <li key={idx} className={pricingCardStyles.featureItem}>
-              <div className={pricingCardStyles.featureIcon}>
+              <div
+                className={`${pricingCardStyles.featureIcon} ${
+                  isPopular
+                    ? pricingCardStyles.featureIconPopular
+                    : pricingCardStyles.featureIconRegular
+                }`}
+              >
                 <svg
                   className="w-3 h-3"
                   fill="none"
@@ -74,10 +80,18 @@ const PricingCard = ({
               type="button"
               onClick={() => onCtaClick && onCtaClick({ title, isPopular, isAnnual })}
               className={`${pricingCardStyles.ctaButton} ${
-                isPopular ? pricingCardStyles.ctaButtonPopular : pricingCardStyles.ctaButtonRegular
+                isPopular
+                  ? pricingCardStyles.ctaButtonPopular
+                  : pricingCardStyles.ctaButtonRegular
               }`}
             >
-              <span className={pricingCardStyles.ctaButtonText}>
+              <span
+                className={`${pricingCardStyles.ctaButtonText} ${
+                  isPopular
+                    ? pricingCardStyles.ctaButtonTextPopular
+                    : pricingCardStyles.ctaButtonTextRegular
+                }`}
+              >
                 {isPopular ? "Get Started" : "Choose Plan"}
               </span>
             </button>
@@ -88,11 +102,16 @@ const PricingCard = ({
               type="button"
               onClick={() =>
                 onCtaClick &&
-                onCtaClick({ title, isPopular, isAnnual }, { openSignInFallback: true })
+                onCtaClick(
+                  { title, isPopular, isAnnual },
+                  { openSignInFallback: true }
+                )
               }
               className={`${pricingCardStyles.ctaButton} ${pricingCardStyles.ctaButtonRegular}`}
             >
-              <span className={pricingCardStyles.ctaButtonText}>Sign in to get started</span>
+              <span className={pricingCardStyles.ctaButtonText}>
+                Sign in to get started
+              </span>
             </button>
           </SignedOut>
         </div>
@@ -134,10 +153,10 @@ const Pricing = () => {
           "Custom branding",
           "Priority support",
           "Advanced analytics",
-          "Lean collaboration (3 members)",   // changed from "Team collaboration"
+          "Lean collaboration (3 members)",
           "API access",
         ],
-        isPopular: true,   // keep badge if you want "Most Popular"
+        isPopular: true,
       },
       {
         title: "Enterprise",
@@ -150,7 +169,7 @@ const Pricing = () => {
           "Custom workflows",
           "Dedicated account manager",
           "SLA guarantee",
-          "White label solutions",          // removed hyphen
+          "White label solutions",
           "Advanced security",
         ],
         isPopular: false,
@@ -267,7 +286,7 @@ const Pricing = () => {
           </button>
         </div>
 
-        {/* Pricing Cards Grid */}
+        {/* Horizontal Cards Grid */}
         <div className={pricingStyles.cardsGrid}>
           {currentPlans.map((plan, index) => (
             <PricingCard
