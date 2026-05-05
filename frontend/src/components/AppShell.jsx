@@ -4,7 +4,7 @@ import { useUser, useClerk } from "@clerk/clerk-react";
 import { appShellStyles } from "../assets/dummyStyles";
 import logo from "../assets/logo.png";
 
-// ----- Icons (unchanged) -----
+// ----- Icons -----
 const DashboardIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -57,7 +57,7 @@ const CollapseIcon = ({ className = "w-4 h-4", collapsed }) => (
   </svg>
 );
 
-// ----- SidebarLink component (receives collapsed and setMobileOpen) -----
+// ----- SidebarLink component -----
 const SidebarLink = ({ to, icon, children, collapsed, setMobileOpen }) => (
   <NavLink
     to={to}
@@ -88,11 +88,13 @@ const SidebarLink = ({ to, icon, children, collapsed, setMobileOpen }) => (
   </NavLink>
 );
 
+// ----- Main AppShell component -----
 const AppShell = () => {
   const navigate = useNavigate();
   const { user } = useUser();
   const { signOut } = useClerk();
 
+  // Sidebar state
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("sidebar_collapsed") === "true";
@@ -103,7 +105,7 @@ const AppShell = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Responsive check
+  // Responsive: auto‑collapse on mobile
   useEffect(() => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 1024;
@@ -114,13 +116,11 @@ const AppShell = () => {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  // Persist collapsed state
+  // Persist sidebar state
   useEffect(() => {
     try {
       localStorage.setItem("sidebar_collapsed", collapsed ? "true" : "false");
-    } catch (error) {
-      console.warn("Failed to persist sidebar collapsed state:", error);
-    }
+    } catch {}
   }, [collapsed]);
 
   // Lock body scroll when mobile drawer is open
@@ -136,6 +136,7 @@ const AppShell = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Logout
   const logout = async () => {
     try {
       await signOut();
@@ -146,6 +147,7 @@ const AppShell = () => {
     }
   };
 
+  // User display helpers
   const displayName = (() => {
     if (!user) return "User";
     const name = user.fullName || user.firstName || user.username || "";
@@ -170,7 +172,7 @@ const AppShell = () => {
         >
           <div className={appShellStyles.sidebarGradient} />
           <div className={appShellStyles.sidebarContainer}>
-            {/* Logo */}
+            {/* Logo area */}
             <div className={`${appShellStyles.logoContainer} ${collapsed ? appShellStyles.logoContainerCollapsed : ""}`}>
               <NavLink to="/app/dashboard" className={appShellStyles.logoLink}>
                 <div className="relative">
@@ -186,7 +188,7 @@ const AppShell = () => {
               </NavLink>
             </div>
 
-            {/* ✅ FIXED: pass collapsed and setMobileOpen to SidebarLink */}
+            {/* Navigation links */}
             <nav className={appShellStyles.nav}>
               <SidebarLink to="/app/dashboard" icon={<DashboardIcon />} collapsed={collapsed} setMobileOpen={setMobileOpen}>
                 Dashboard
@@ -202,16 +204,23 @@ const AppShell = () => {
               </SidebarLink>
             </nav>
 
-            {/* User & Logout */}
+            {/* User section & logout */}
             <div className={appShellStyles.userSection}>
-              <div className={`${appShellStyles.userDivider} ${collapsed ? appShellStyles.userDividerCollapsed : appShellStyles.userDividerExpanded}`} />
+              <div
+                className={`${appShellStyles.userDivider} ${
+                  collapsed ? appShellStyles.userDividerCollapsed : appShellStyles.userDividerExpanded
+                }`}
+              />
               {!collapsed ? (
                 <button onClick={logout} className={appShellStyles.logoutButton}>
                   <LogoutIcon className={appShellStyles.logoutIcon} />
                   <span>Logout</span>
                 </button>
               ) : (
-                <button onClick={logout} className="w-full flex items-center justify-center p-3 rounded-xl text-red-600 hover:bg-red-50 hover:shadow-md transition-all duration-300">
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center justify-center p-3 rounded-xl text-red-600 hover:bg-red-50 hover:shadow-md transition-all duration-300"
+                >
                   <LogoutIcon className="w-5 h-5 hover:scale-110 transition-transform" />
                 </button>
               )}
@@ -228,15 +237,23 @@ const AppShell = () => {
           </div>
         </aside>
 
-        {/* Main content */}
+        {/* Main content area */}
         <main className="flex-1 flex flex-col min-h-screen">
-          <header className={`${appShellStyles.header} ${scrolled ? appShellStyles.headerScrolled : appShellStyles.headerNotScrolled}`}>
+          {/* Top header */}
+          <header
+            className={`${appShellStyles.header} ${scrolled ? appShellStyles.headerScrolled : appShellStyles.headerNotScrolled}`}
+          >
             <div className={appShellStyles.headerTopSection}>
-              <button className={appShellStyles.mobileMenuButton} onClick={() => setMobileOpen(true)}>
+              {/* Mobile menu button */}
+              <button
+                className={appShellStyles.mobileMenuButton}
+                onClick={() => setMobileOpen(true)}
+              >
                 <svg className={appShellStyles.mobileMenuIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
+              {/* Desktop collapse button (optional) */}
               <button className={appShellStyles.desktopCollapseButton} onClick={() => setCollapsed(!collapsed)}>
                 <CollapseIcon collapsed={collapsed} />
               </button>
@@ -263,6 +280,8 @@ const AppShell = () => {
               </div>
             </div>
           </header>
+
+          {/* Page content – Outlet for nested routes */}
           <div className={appShellStyles.main}>
             <div className={appShellStyles.mainContainer}>
               <Outlet />
@@ -271,7 +290,7 @@ const AppShell = () => {
         </main>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile sidebar drawer */}
       {mobileOpen && (
         <div className={appShellStyles.mobileOverlay}>
           <div className={appShellStyles.mobileBackdrop} onClick={() => setMobileOpen(false)} />
@@ -288,16 +307,40 @@ const AppShell = () => {
               </button>
             </div>
             <nav className={appShellStyles.mobileNav}>
-              <NavLink to="/app/dashboard" className={({ isActive }) => `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`} onClick={() => setMobileOpen(false)}>
+              <NavLink
+                to="/app/dashboard"
+                className={({ isActive }) =>
+                  `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
                 <DashboardIcon /> Dashboard
               </NavLink>
-              <NavLink to="/app/invoices" className={({ isActive }) => `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`} onClick={() => setMobileOpen(false)}>
+              <NavLink
+                to="/app/invoices"
+                className={({ isActive }) =>
+                  `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
                 <InvoiceIcon /> Invoices
               </NavLink>
-              <NavLink to="/app/create-invoice" className={({ isActive }) => `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`} onClick={() => setMobileOpen(false)}>
+              <NavLink
+                to="/app/create-invoice"
+                className={({ isActive }) =>
+                  `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
                 <CreateIcon /> Create Invoice
               </NavLink>
-              <NavLink to="/app/business" className={({ isActive }) => `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`} onClick={() => setMobileOpen(false)}>
+              <NavLink
+                to="/app/business"
+                className={({ isActive }) =>
+                  `${appShellStyles.mobileNavLink} ${isActive ? appShellStyles.mobileNavLinkActive : appShellStyles.mobileNavLinkInactive}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
                 <ProfileIcon /> Business Profile
               </NavLink>
             </nav>
