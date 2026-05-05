@@ -287,29 +287,31 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Billing Toggle */}
-        <div className={pricingStyles.billingToggle}>
-          <button
-            onClick={() => setBillingPeriod("monthly")}
-            className={`${pricingStyles.billingButton} ${
-              billingPeriod === "monthly"
-                ? pricingStyles.billingButtonActive
-                : pricingStyles.billingButtonInactive
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setBillingPeriod("annual")}
-            className={`${pricingStyles.billingButton} ${
-              billingPeriod === "annual"
-                ? pricingStyles.billingButtonActive
-                : pricingStyles.billingButtonInactive
-            }`}
-          >
-            Annual
-            <span className={pricingStyles.billingBadge}>Save 20%</span>
-          </button>
+        {/* Centered Billing Toggle */}
+        <div className="flex justify-center">
+          <div className={pricingStyles.billingToggle}>
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              className={`${pricingStyles.billingButton} ${
+                billingPeriod === "monthly"
+                  ? pricingStyles.billingButtonActive
+                  : pricingStyles.billingButtonInactive
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingPeriod("annual")}
+              className={`${pricingStyles.billingButton} ${
+                billingPeriod === "annual"
+                  ? pricingStyles.billingButtonActive
+                  : pricingStyles.billingButtonInactive
+              }`}
+            >
+              Annual
+              <span className={pricingStyles.billingBadge}>Save 20%</span>
+            </button>
+          </div>
         </div>
 
         {/* Pricing Cards Grid - horizontal on large screens */}
