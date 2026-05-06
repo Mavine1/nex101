@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { dashboardStyles } from "../assets/dummyStyles";
+import KpiCard from './KpiCard';
 
 const API_BASE = "http://localhost:4000";
 const HARD_RATES = { USD_TO_INR: 83 };
