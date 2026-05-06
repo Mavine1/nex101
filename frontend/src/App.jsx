@@ -41,7 +41,7 @@ const App = () => {
           <Route path="invoices/:id/preview" element={<InvoicePreview />} />
           <Route path="invoices/:id/edit" element={<CreateInvoice />} />
           <Route path="create-invoice" element={<CreateInvoice />} />
-          <Route path="business" element={<BusinessProfile />} />
+          {/* <Route path="business" element={<BusinessProfile />} /> */}
         </Route>
       </Routes>
     </div>

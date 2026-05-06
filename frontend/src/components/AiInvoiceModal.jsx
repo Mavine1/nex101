@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { aiInvoiceModalStyles } from '../assets/dummyStyles'; // adjust path as needed
-import GeminiIcon from './GeminiIcon'; // adjust path
-import AnimatedButton from '../assets/GenerateBtn/Gbtn'; // adjust path
+import React, { useState, useEffect } from "react";
+import { aiInvoiceModalStyles } from "../assets/dummyStyles";
+import GeminiIcon from "./GeminiIcon";
+import AnimatedButton from "../assets/GenerateBtn/Gbtn";
 
 const AiInvoiceModal = ({ open, onClose, onGenerate, initialText = "" }) => {
   const [text, setText] = useState(initialText || "");
