@@ -1,810 +1,777 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@clerk/clerk-react";
-import { invoicePreviewStyles } from "../assets/dummyStyles";
+// src/assets/dummyStyles.js
+// Invoice Theme – colors replaced with blue/indigo gradients except status badges
 
-const API_BASE = "http://localhost:4000";
-const PROFILE_ENDPOINT = `${API_BASE}/api/businessProfile/me`;
-const INVOICE_ENDPOINT = (id) => `${API_BASE}/api/invoice/${id}`;
-
-function resolveImageUrl(url) {
-  if (!url) return null;
-  const s = String(url).trim();
-  // data URI -> return directly
-  if (s.startsWith("data:")) {
-    console.debug("[resolveImageUrl] data URI", s.slice(0, 40) + "...");
-    return s;
-  }
-
-  if (/localhost|127\.0\.0\.1/.test(s)) {
-    try {
-      const parsed = new URL(s);
-      const path =
-        parsed.pathname + (parsed.search || "") + (parsed.hash || "");
-      const resolved = `${API_BASE.replace(/\/+$/, "")}${path}`;
-      console.debug("[resolveImageUrl] rewritten localhost ->", {
-        orig: s,
-        resolved,
-      });
-      return resolved;
-    } catch (e) {
-      // fallback: strip host prefix
-      const path = s.replace(/^https?:\/\/[^/]+/, "");
-      const resolved = `${API_BASE.replace(/\/+$/, "")}${path}`;
-      console.debug("[resolveImageUrl] fallback rewrite localhost ->", {
-        orig: s,
-        resolved,
-      });
-      return resolved;
-    }
-  }
-
-  // absolute http(s) -> return as-is
-  if (/^https?:\/\//i.test(s)) {
-    console.debug("[resolveImageUrl] absolute URL", s);
-    return s;
-  }
-
-  // relative path like "/uploads/..." or "uploads/..."
-  const resolved = `${API_BASE.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
-  console.debug("[resolveImageUrl] relative ->", { orig: s, resolved });
-  return resolved;
-}
-
-function readJSON(key, fallback = null) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
-function writeJSON(key, val) {
-  try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch {}
-}
-function getStoredInvoices() {
-  return readJSON("invoices_v1", []) || [];
-}
-
-const defaultProfile = {
-  businessName: "",
-  email: "",
-  address: "",
-  phone: "",
-  gst: "",
-  stampDataUrl: null,
-  signatureDataUrl: null,
-  logoDataUrl: null,
-  defaultTaxPercent: 18,
-  signatureName: "",
-  signatureTitle: "",
+export const aiInvoiceModalStyles = {
+  overlay: "fixed inset-0 z-50 flex items-center justify-center p-4",
+  backdrop: "absolute inset-0 bg-black opacity-30",
+  modal: "relative max-w-3xl w-full bg-white rounded-2xl shadow-lg p-6 z-10",
+  title: "inline-flex items-center gap-2 py-2 pb-4 text-gray-700 transition-all duration-200 font-medium group",
+  description: "text-sm text-gray-500 mt-1",
+  closeButton: "text-gray-400 hover:text-gray-600",
+  label: "block text-xs font-medium text-gray-600 mb-2",
+  textarea: "w-full rounded-md border text-gray-500 border-gray-200 px-3 py-2 text-sm resize-vertical focus:ring-2 focus:ring-indigo-100",
+  error: "mt-3 text-sm text-rose-600",
+  actions: "mt-4 flex justify-end gap-3",
+  cancelButton: "px-4 py-2 rounded-md border text-sm",
+  generateButton: "px-4 py-2 rounded-md bg-indigo-600 text-white text-sm disabled:opacity-60"
 };
 
-function currencyFmt(amount = 0, currency = "INR") {
-  try {
-    if (currency === "INR") {
-      return new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount);
-    }
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${currency} ${Number(amount || 0).toFixed(2)}`;
+export const businessProfileStyles = {
+  pageContainer: "space-y-8 font-[pacifico]",
+  headerContainer: "text-center lg:text-left",
+  headerTitle: "text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight",
+  headerSubtitle: "mt-2 text-lg text-gray-600 max-w-3xl",
+  cardContainer: "bg-white/80 backdrop-blur-xl rounded-2xl p-8 border border-gray-200/60 shadow-sm",
+  cardHeaderContainer: "flex items-center gap-3 mb-6",
+  cardIconContainer: "p-2 rounded-lg",
+  cardTitle: "text-xl whitespace-nowrap font-semibold text-gray-900",
+  gridCols1: "grid grid-cols-1 gap-6",
+  gridCols2: "grid grid-cols-1 md:grid-cols-2 gap-6",
+  gridCols2Lg: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8",
+  gridColSpan2: "md:col-span-2",
+  label: "block text-sm font-medium text-gray-700 mb-2",
+  input: "w-full rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  textarea: "w-full rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  uploadArea: "border-4 border-dashed border-gray-300 rounded-2xl p-6 transition-all duration-300 hover:border-gray-400 group",
+  uploadIconContainer: "w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-gray-400",
+  uploadSmallIconContainer: "w-12 h-12 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-gray-400",
+  uploadTextTitle: "text-sm font-medium text-gray-900",
+  uploadTextSubtitle: "text-xs text-gray-500 mt-1",
+  logoPreview: "w-40 h-32 mx-auto rounded-xl overflow-hidden flex items-center justify-center bg-white",
+  stampPreview: "w-32 h-24 mx-auto rounded-xl overflow-hidden flex items-center justify-center bg-white",
+  signaturePreview: "w-32 h-20 mx-auto rounded-xl overflow-hidden flex items-center justify-center bg-white",
+  buttonGroup: "flex flex-wrap gap-2 justify-center sm:gap-3 md:gap-4",
+  changeButton: "inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 md:px-5 md:py-2.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all duration-200 cursor-pointer font-medium text-sm sm:text-base",
+  removeButton: "inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 md:px-5 md:py-2.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 transition-all duration-200 font-medium text-sm sm:text-base",
+  taxContainer: "bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100",
+  taxInput: "w-32 rounded-xl border border-gray-300 px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-medium text-center",
+  taxHelpText: "text-xs text-gray-500 mt-3",
+  actionContainer: "bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/60 shadow-sm",
+  actionInnerContainer: "flex flex-col sm:flex-row items-center justify-between gap-4",
+  actionButtonGroup: "flex flex-wrap items-center gap-2 sm:gap-3 justify-center sm:justify-start",
+  saveButton: "inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 md:px-7 md:py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-sm sm:text-base hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed",
+  resetButton: "inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 md:px-7 md:py-3.5 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium text-sm sm:text-base",
+  hoverScale: "group-hover:scale-105 transition-transform duration-300"
+};
+
+export const iconColors = {
+  business: "bg-blue-100 text-blue-600",
+  branding: "bg-indigo-100 text-indigo-600",
+  assets: "bg-indigo-100 text-indigo-600"
+};
+
+export const customStyles = {
+  inputPlaceholder: "text-gray-500",
+  taxPercentage: "text-2xl font-bold text-gray-600"
+};
+
+export const aiReminderModalStyles = {
+  overlay: "fixed inset-0 z-50 flex items-center justify-center p-4",
+  backdrop: "absolute inset-0 bg-black opacity-30",
+  modal: "relative max-w-2xl w-full bg-white rounded-2xl shadow-lg p-6 z-10",
+  title: "text-lg font-semibold",
+  description: "text-sm text-gray-500 mt-1",
+  closeButton: "text-gray-400 hover:text-gray-600",
+  label: "block text-sm font-medium text-gray-700",
+  textarea: "mt-1 w-full text-gray-500 rounded-md border border-gray-200 px-3 py-2 text-sm",
+  error: "mt-3 text-sm text-rose-600",
+  previewHeader: "text-sm font-medium",
+  previewHelper: "text-xs text-gray-500",
+  previewBox: "mt-2 bg-gray-50 rounded-md p-3 min-h-[120px] text-sm whitespace-pre-wrap",
+  previewPlaceholder: "text-gray-400",
+  previewPlaceholderHighlight: "font-medium",
+  actions: "mt-4 flex items-center justify-end gap-3",
+  resetButton: "px-3 py-2 rounded-md border text-sm",
+  copyButton: "px-3 py-2 rounded-md border text-sm",
+  copyButtonEnabled: "bg-white hover:bg-gray-50",
+  copyButtonDisabled: "opacity-50 cursor-not-allowed",
+  generateButton: "px-4 py-2 rounded-md bg-indigo-600 text-white text-sm"
+};
+
+export const createInvoiceStyles = {
+  pageContainer: "space-y-8 font-[pacifico]",
+  mainGrid: "grid lg:grid-cols-3 gap-8",
+  leftColumn: "lg:col-span-2 space-y-8",
+  rightColumn: "space-y-8",
+  headerContainer: "flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4",
+  headerTitle: "text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight",
+  headerSubtitle: "mt-2 text-lg text-gray-600 max-w-3xl",
+  headerButtonContainer: "flex items-center gap-3",
+  cardContainer: "bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 md:p-8 border border-gray-200/60 shadow-sm w-full",
+  cardSmallContainer: "bg-white/80 backdrop-blur-xl rounded-2xl p-3 sm:p-4 md:p-6 border border-gray-200/60 shadow-sm w-full",
+  cardHeaderContainer: "flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6",
+  cardHeaderWithButton: "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 sm:mb-6",
+  cardHeaderLeft: "flex items-center gap-2 sm:gap-3",
+  cardIconContainer: "p-2 rounded-lg w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 flex items-center justify-center",
+  cardTitle: "text-xl sm:text-2xl font-semibold text-gray-900",
+  cardSubtitle: "text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4",
+  gridCols1: "grid grid-cols-1 gap-6",
+  gridCols2: "grid grid-cols-1 md:grid-cols-2 gap-6",
+  gridCols3: "grid grid-cols-1 md:grid-cols-3 gap-6",
+  gridCols2Lg: "grid grid-cols-1 lg:grid-cols-2 gap-8",
+  gridColSpan2: "md:col-span-2",
+  label: "block text-sm font-medium text-gray-700 mb-2",
+  labelWithMargin: "block text-sm font-medium text-gray-700 mb-3",
+  input: "w-full rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  inputMedium: "w-full rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-medium",
+  inputCenter: "w-full rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-center font-medium",
+  textarea: "w-full rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  inputSmall: "w-full rounded-xl border text-gray-500 border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm",
+  previewButton: "inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium shadow-sm",
+  saveButton: "inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed",
+  saveProfileButton: "inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all duration-200 text-sm font-medium",
+  addItemButton: "inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-all duration-200 font-medium w-full justify-center group",
+  currencyContainer: "flex gap-3",
+  currencyButton: "flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 flex-1",
+  currencyButtonActive1: "border-blue-500 bg-blue-50 text-blue-700 shadow-sm",
+  currencyButtonActive2: "border-blue-500 bg-blue-50 text-blue-700 shadow-sm",
+  currencyButtonInactive: "border-gray-200 bg-white text-gray-600 hover:border-gray-300",
+  statusContainer: "flex flex-wrap gap-2",
+  statusButton: "relative overflow-hidden rounded-full transition-all duration-200 ease-out",
+  statusButtonActive: "ring-2 ring-offset-2 ring-blue-500 transform scale-105",
+  statusButtonInactive: "opacity-80 hover:opacity-100 hover:scale-105",
+  statusDropdown: "mt-2 sm:hidden w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  currencyBadge: "text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg",
+  itemsTableHeader: "hidden lg:grid lg:grid-cols-12 gap-4 mb-4 px-2 text-sm font-medium text-gray-700 items-center min-w-0",
+  itemsTableRow: "grid grid-cols-6 sm:grid-cols-12 lg:grid-cols-12 gap-4 items-center group hover:bg-gray-50 p-3 rounded-xl transition-all duration-200 min-w-0",
+  itemsInput: "rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 w-full min-w-0 overflow-hidden truncate text-sm sm:text-base",
+  itemsNumberInput: "rounded-xl border border-gray-300 px-3 py-3 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-right w-full min-w-0 overflow-x-auto whitespace-nowrap text-sm sm:text-base",
+  itemsTotal: "text-center font-medium text-gray-900 flex items-center justify-center min-w-0 max-w-full break-words text-left text-sm sm:text-base",
+  itemsRemoveButton: "flex items-center justify-center p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-all duration-200 focus:outline-none",
+  itemsFieldLabel: "block text-xs font-medium text-gray-600 mb-1",
+  itemsListWrapper: "space-y-4",
+  itemRow: "min-w-0",
+  itemColDescription: "col-span-6 sm:col-span-6 md:col-span-6 lg:col-span-3 min-w-0",
+  itemColQuantity: "col-span-6 sm:col-span-2 md:col-span-2 lg:col-span-2 min-w-0",
+  itemColUnitPrice: "col-span-6 sm:col-span-2 md:col-span-2 lg:col-span-3 min-w-0",
+  itemColTotal: "col-span-6 sm:col-span-1 md:col-span-1 lg:col-span-3 min-w-0",
+  itemColRemove: "col-span-6 sm:col-span-1 md:col-span-1 lg:col-span-1 flex justify-center min-w-0",
+  uploadArea: "border-4 border-dashed border-gray-300 rounded-2xl p-6 transition-all duration-300 hover:border-gray-400 group",
+  uploadSmallArea: "border-4 border-dashed border-gray-300 rounded-2xl p-6 transition-all duration-300 hover:border-gray-400 group",
+  imagePreviewContainer: "text-center space-y-4",
+  logoPreview: "w-32 h-24 lg:w-28 lg:h-20 mx-auto rounded-xl overflow-hidden flex items-center justify-center",
+  stampPreview: "w-24 h-20 mx-auto rounded-xl overflow-hidden flex items-center justify-center bg-white",
+  signaturePreview: "w-24 h-16 mx-auto rounded-xl overflow-hidden flex items-center justify-center bg-white",
+  buttonGroup: "flex lg:flex-col xl:flex-row gap-2 justify-center",
+  changeButton: "inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all duration-200 cursor-pointer text-sm font-medium",
+  removeButton: "inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-all duration-200 text-sm font-medium",
+  uploadIconContainer: "w-12 h-12 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-gray-400",
+  uploadSmallIconContainer: "w-10 h-10 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-gray-400",
+  uploadTextTitle: "text-sm font-medium text-gray-900",
+  uploadTextSubtitle: "text-xs text-gray-500 mt-1",
+  summaryRow: "flex items-center justify-between py-3 border-b border-gray-200",
+  summaryLabel: "text-sm font-medium text-gray-600",
+  summaryValue: "font-semibold text-gray-900",
+  taxRow: "flex items-center justify-between py-2",
+  totalRow: "flex items-center justify-between py-3 border-t border-gray-200",
+  totalLabel: "text-lg font-bold text-gray-900",
+  totalValue: "text-lg font-bold text-gray-900",
+  hoverScale: "group-hover:scale-105 transition-transform duration-300",
+  iconHover: "group-hover:scale-110 transition-transform"
+};
+
+export const createInvoiceIconColors = {
+  invoice: "bg-blue-100 text-blue-600",
+  billFrom: "bg-emerald-100 text-emerald-600",
+  billTo: "bg-indigo-100 text-indigo-600",
+  items: "bg-blue-100 text-blue-600"
+};
+
+export const createInvoiceCustomStyles = {
+  inputPlaceholder: "text-gray-500",
+  currencySymbol: "text-lg font-semibold"
+};
+
+export const appShellStyles = {
+  root: "min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20",
+  layout: "lg:flex",
+  sidebar: "hidden lg:block bg-white/80 backdrop-blur-xl border-r border-gray-200/60 transition-all duration-500 ease-in-out relative",
+  sidebarCollapsed: "w-20",
+  sidebarExpanded: "w-80",
+  sidebarGradient: "absolute inset-0 bg-gradient-to-b from-blue-50/5 to-transparent pointer-events-none",
+  sidebarContainer: "px-6 py-8 h-full flex flex-col justify-between relative z-10",
+  logoContainer: "mb-12 flex items-center",
+  logoContainerCollapsed: "justify-center",
+  logoLink: "inline-flex items-center group transition-all duration-300",
+  logoImage: "h-16 w-16 object-contain drop-shadow-sm",
+  logoTextContainer: "",
+  logoText: "font-bold text-3xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent",
+  logoUnderline: "h-0.5 w-0 group-hover:w-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500 mt-1",
+  collapseButton: "p-2 ml-7 rounded-lg border border-gray-200 bg-white/50 hover:bg-white hover:shadow-md transition-all duration-300 group",
+  nav: "space-y-2",
+  sidebarLink: "group flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out",
+  sidebarLinkCollapsed: "justify-center",
+  sidebarLinkActive: "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm border border-blue-100",
+  sidebarLinkInactive: "text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-md",
+  sidebarIcon: "transition-all duration-300",
+  sidebarIconActive: "text-blue-600 scale-110",
+  sidebarIconInactive: "text-gray-400 group-hover:text-gray-600 group-hover:scale-105",
+  sidebarText: "flex-1 transition-all duration-300",
+  sidebarActiveIndicator: "w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse",
+  userSection: "mt-auto",
+  userDivider: "border-t border-gray-200/60 pt-6",
+  userDividerCollapsed: "px-1",
+  userDividerExpanded: "px-2",
+  logoutButton: "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 hover:shadow-sm transition-all duration-300 group",
+  logoutIcon: "w-5 h-5 group-hover:scale-110 transition-transform",
+  collapseSection: "mt-4 flex justify-center",
+  collapseButtonInner: "flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-white transition-all duration-300 text-xs text-gray-600 hover:text-gray-800",
+  collapseButtonCollapsed: "justify-center w-10",
+  mobileOverlay: "lg:hidden fixed inset-0 z-50",
+  mobileBackdrop: "absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300",
+  mobileSidebar: "absolute inset-y-0 left-0 w-80 bg-white/90 backdrop-blur-xl border-r border-gray-200/60 p-6 overflow-auto transform transition-transform duration-300",
+  mobileHeader: "mb-8 flex items-center justify-between",
+  mobileLogoLink: "inline-flex items-center",
+  mobileLogoImage: "h-10 w-10 object-contain",
+  mobileLogoText: "font-bold text-xl ml-3 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent",
+  mobileCloseButton: "p-2 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-white transition-all duration-300",
+  mobileCloseIcon: "w-5 h-5 text-gray-600",
+  mobileNav: "space-y-2",
+  mobileNavLink: "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-300",
+  mobileNavLinkActive: "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-100",
+  mobileNavLinkInactive: "text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm",
+  mobileLogoutSection: "mt-8 border-t border-gray-200/60 pt-6",
+  mobileLogoutButton: "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition-all duration-300",
+  header: "flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-40 transition-all duration-300 min-h-20",
+  headerScrolled: "shadow-sm",
+  headerNotScrolled: "shadow-none",
+  headerTopSection: "flex items-center justify-between sm:justify-start w-full sm:w-auto py-3 sm:py-0",
+  headerContent: "flex items-center gap-3 sm:gap-6",
+  mobileMenuButton: "lg:hidden inline-flex items-center justify-center p-2 sm:p-3 rounded-xl border border-gray-200 bg-white/50 hover:bg-white hover:shadow-md transition-all duration-300",
+  mobileMenuIcon: "w-5 h-5 text-gray-700",
+  desktopCollapseButton: "hidden lg:flex items-center justify-center p-2 rounded-xl border border-gray-200 bg-white/50 hover:bg-white hover:shadow-md transition-all duration-300",
+  welcomeContainer: "flex flex-col",
+  welcomeTitle: "text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 tracking-tight",
+  welcomeName: "bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent",
+  welcomeSubtitle: "text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1",
+  mobileUserAvatar: "lg:hidden flex items-center gap-2",
+  mobileAvatar: "w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-semibold shadow-lg",
+  headerActions: "flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pb-3 sm:pb-0 border-t border-gray-100 sm:border-t-0 pt-3 sm:pt-0",
+  ctaButton: "group inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 text-sm sm:text-base flex-1 sm:flex-none justify-center",
+  ctaIcon: "w-4 h-4 text-white",
+  ctaArrow: "w-0 group-hover:w-2 group-hover:ml-1 transition-all duration-300 overflow-hidden hidden sm:block",
+  userSectionDesktop: "lg:flex md:flex items-center gap-4 pl-4 border-l border-gray-200/60",
+  userInfo: "hidden sm:block text-right",
+  userName: "text-sm font-medium text-gray-900",
+  userEmail: "text-xs text-gray-500",
+  userAvatarContainer: "relative",
+  userAvatar: "w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-300 cursor-pointer group",
+  userAvatarBorder: "absolute inset-0 rounded-2xl border-2 border-white/20 group-hover:border-white/40 transition-all duration-300",
+  userStatus: "absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white shadow-sm",
+  main: "p-4 sm:p-6 lg:p-8",
+  mainContainer: "max-w-7xl mx-auto"
+};
+
+export const dashboardStyles = {
+  pageContainer: "space-y-8 font-[pacifico]",
+  headerContainer: "text-center lg:text-left",
+  headerTitle: "text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight",
+  headerSubtitle: "mt-2 text-lg text-gray-600 max-w-2xl mx-auto lg:mx-0",
+  kpiGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8",
+  mainGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-4 gap-8",
+  sidebarColumn: "xl:col-span-1 space-y-6",
+  contentColumn: "xl:col-span-3",
+  cardContainer: "bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-sm",
+  cardContainerOverflow: "bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden",
+  quickStatsCard: "bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white",
+  quickStatsTitle: "font-semibold text-lg mb-4",
+  quickStatsRow: "flex justify-between items-center",
+  quickStatsLabel: "text-blue-100",
+  quickStatsValue: "font-semibold",
+  quickActionsContainer: "space-y-3",
+  quickActionButton: "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group",
+  quickActionIconContainer: "p-2 rounded-lg group-hover:scale-110 transition-transform",
+  quickActionText: "font-medium",
+  quickActionBlue: "bg-blue-50 text-blue-700 hover:bg-blue-100",
+  quickActionGray: "bg-gray-50 text-gray-700 hover:bg-gray-100",
+  tableHeader: "px-6 py-5 border-b border-gray-200/60",
+  tableHeaderContent: "flex flex-col sm:flex-row sm:items-center sm:justify-between",
+  tableTitle: "text-lg font-semibold text-gray-900",
+  tableSubtitle: "text-sm text-gray-600 mt-1",
+  tableActionButton: "mt-3 sm:mt-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200",
+  tableContainer: "overflow-x-auto",
+  table: "w-full",
+  tableHead: "bg-gray-50/80 border-b border-gray-200/60",
+  tableHeaderCell: "px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider",
+  tableHeaderCellRight: "px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider",
+  tableBody: "divide-y divide-gray-200/60",
+  tableRow: "hover:bg-gray-50/50 transition-colors duration-150 group cursor-pointer",
+  tableCell: "px-6 py-4",
+  clientAvatar: "w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-medium group-hover:scale-110 transition-transform duration-200",
+  clientInfo: "font-medium text-gray-900 group-hover:text-blue-600 transition-colors",
+  clientSubInfo: "text-sm text-gray-500",
+  amountCell: "font-medium text-gray-900",
+  dateCell: "text-sm text-gray-900",
+  actionButton: "inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 group/btn",
+  emptyState: "px-6 py-12 text-center",
+  emptyStateIcon: "w-12 h-12 mx-auto text-gray-300",
+  emptyStateText: "text-gray-500 space-y-2",
+  emptyStateMessage: "font-medium",
+  emptyStateAction: "text-blue-600 hover:text-blue-700 font-medium",
+  quickActionIconBlue: "bg-blue-100",
+  quickActionIconGray: "bg-gray-100"
+};
+
+export const invoicesStyles = {
+  pageContainer: "space-y-8 font-[pacifico]",
+  headerContainer: "flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4",
+  headerTitle: "text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight",
+  headerSubtitle: "mt-2 text-lg text-gray-600 max-w-3xl",
+  headerActions: "flex items-center gap-3",
+  aiButton: "inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium shadow-sm group",
+  createButton: "inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg",
+  statsGrid: "grid grid-cols-2 md:grid-cols-4 gap-6",
+  statCard: "bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/60 shadow-sm",
+  statValue: "text-2xl font-bold text-gray-900",
+  statLabel: "text-sm text-gray-600 mt-1",
+  filtersCard: "bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/60 shadow-sm",
+  filtersHeader: "flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6",
+  filtersHeaderLeft: "flex items-center gap-3",
+  filtersIconContainer: "p-2 rounded-lg bg-blue-100 text-blue-600",
+  filtersTitle: "text-xl font-semibold text-gray-900",
+  filtersCount: "text-sm text-gray-600",
+  filtersCountNumber: "font-bold text-gray-900",
+  filtersGrid: "grid grid-cols-1 lg:grid-cols-5 gap-4",
+  searchContainer: "lg:col-span-2",
+  filterLabel: "block text-sm font-medium text-gray-700 mb-2",
+  searchInputContainer: "relative",
+  searchIcon: "absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none",
+  searchInput: "w-full rounded-xl border border-gray-300 pl-10 pr-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  selectInput: "w-full rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  dateRangeContainer: "lg:col-span-2",
+  dateRangeFlex: "flex flex-col sm:flex-row sm:items-center gap-3",
+  dateInput: "w-full sm:flex-1 min-w-0 rounded-xl border border-gray-300 px-4 py-3 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  dateSeparator: "flex items-center justify-center",
+  dateSeparatorText: "text-gray-400 text-sm",
+  filtersFooter: "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-6 border-t border-gray-200/60",
+  perPageContainer: "flex items-center gap-3",
+  perPageLabel: "text-sm font-medium text-gray-700",
+  perPageSelect: "rounded-xl border border-gray-300 px-4 py-2 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200",
+  resetButton: "inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-200 font-medium",
+  tableCard: "bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden",
+  tableHeader: "px-6 py-5 border-b border-gray-200/60",
+  tableHeaderContent: "flex items-center justify-between",
+  tableTitle: "text-lg font-semibold text-gray-900",
+  tableSubtitle: "text-sm text-gray-600 mt-1",
+  tableSubtitleBold: "font-medium text-gray-900",
+  tableContainer: "overflow-x-auto",
+  table: "w-full",
+  tableHead: "bg-gray-50/80 border-b border-gray-200/60",
+  tableHeaderCell: "cursor-pointer px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hover:bg-gray-100/50 transition-colors duration-150",
+  tableHeaderCellRight: "px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider",
+  tableHeaderCellContent: "flex items-center gap-2",
+  tableBody: "divide-y divide-gray-200/60",
+  tableRow: "hover:bg-gray-50/50 transition-colors duration-150 group",
+  clientCell: "px-6 py-4",
+  clientContainer: "flex items-center gap-4",
+  clientAvatar: "w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-medium group-hover:scale-110 transition-transform duration-200",
+  clientInfo: "font-medium text-gray-900 group-hover:text-blue-600 transition-colors",
+  clientId: "text-sm text-gray-500 mt-1",
+  clientEmail: "text-xs text-gray-400 mt-1 hidden md:block",
+  amountCell: "px-6 py-4 font-medium text-gray-900",
+  statusCell: "px-6 py-4",
+  dateCell: "px-6 py-4 text-sm text-gray-900",
+  actionsCell: "px-6 py-4 text-right",
+  actionsContainer: "flex items-center justify-end gap-2",
+  viewButton: "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 group/btn",
+  sendButton: "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group/btn",
+  buttonIcon: "w-4 h-4 group-hover/btn:scale-110 transition-transform",
+  emptyState: "px-6 py-12 text-center",
+  emptyStateIconContainer: "w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center",
+  emptyStateIcon: "w-8 h-8 text-gray-400",
+  emptyStateText: "text-gray-500 space-y-3",
+  emptyStateTitle: "font-medium text-lg",
+  emptyStateMessage: "text-sm max-w-md mx-auto",
+  emptyStateAction: "text-blue-600 hover:text-blue-700 font-medium",
+  paginationContainer: "px-6 py-4 bg-gray-50/80 border-t border-gray-200/60",
+  pagination: "flex items-center justify-between mt-8 pt-6 border-t border-gray-200/60",
+  paginationText: "text-sm text-gray-600",
+  paginationControls: "flex items-center gap-2",
+  paginationButton: "flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200",
+  paginationNumbers: "flex items-center gap-1",
+  paginationNumber: "w-10 h-10 rounded-xl text-sm font-medium transition-all duration-200",
+  paginationNumberActive: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg",
+  paginationNumberInactive: "text-gray-600 hover:bg-gray-100"
+};
+
+export const featuresStyles = {
+  section: "relative py-24 bg-gradient-to-b from-gray-50 to-white overflow-hidden",
+  backgroundBlob1: "absolute top-0 left-0 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob",
+  backgroundBlob2: "absolute top-0 right-0 w-72 h-72 bg-indigo-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000",
+  backgroundBlob3: "absolute -bottom-8 left-20 w-72 h-72 bg-indigo-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000",
+  container: "relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+  headerContainer: "text-center max-w-3xl mx-auto mb-20",
+  badge: "inline-flex items-center px-4 py-2 rounded-full bg-blue-50 border border-blue-100 mb-6",
+  badgeDot: "w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse",
+  badgeText: "text-sm font-medium text-blue-700",
+  title: "text-2xl md:text-5xl lg:text-5xl xl:text-5xl font-bold text-gray-900 tracking-tight",
+  titleGradient: "bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent",
+  subtitle: "mt-6 text-md md:text-xl lg:text-xl xl:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto",
+  featuresGrid: "mt-16 grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 relative",
+  featureCard: "group relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/60 shadow-sm hover:shadow-2xl transition-all duration-500 ease-out hover:-translate-y-2 overflow-hidden",
+  featureCardGradient: "absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+  featureCardBorder: "absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-5 transition-opacity duration-500",
+  featureCardContent: "relative flex items-start gap-6",
+  featureCardIconContainer: "flex-shrink-0 w-10 h-10 lg:w-8 lg:h-8 xl:w-10 xl:h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300",
+  featureCardTextContainer: "flex-1",
+  featureCardTitle: "text-sm whitespace-nowrap md:text-lg lg:text-sm xl:text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300",
+  featureCardDescription: "mt-3 text-sm text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300",
+  featureCardCta: "mt-4 flex items-center text-blue-500 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300",
+  featureCardCtaText: "text-sm font-medium",
+  featureCardCtaIcon: "w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform duration-300",
+  bottomCtaContainer: "mt-16 text-center",
+  bottomCtaButton: "group inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300",
+  bottomCtaButtonText: "Explore All Features",
+  bottomCtaButtonIcon: "w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform duration-300"
+};
+
+export const heroStyles = {
+  section: "relative min-h-screen pb-16 flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50/30 to-gray-50",
+  bgElement1: "absolute top-1/4 -left-10 w-72 h-72 rounded-full blur-3xl opacity-60 bg-gradient-to-r from-blue-200/40 to-indigo-300/40 animate-float-slow",
+  bgElement2: "absolute bottom-1/4 -right-10 w-96 h-96 rounded-full blur-3xl opacity-50 bg-gradient-to-r from-indigo-200/30 to-blue-300/30 animate-float-medium",
+  bgElement3: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-3xl opacity-20 bg-gradient-to-r from-blue-200/20 to-indigo-300/20 animate-pulse-slow",
+  gridPattern: "absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.8)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,black,transparent)]",
+  container: "relative max-w-7xl mx-auto px-6 py-24 lg:py-32",
+  grid: "grid lg:grid-cols-2 gap-16 lg:gap-24 items-center",
+  content: "space-y-8 lg:space-y-10",
+  contentInner: "space-y-6",
+  badge: "inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/80 backdrop-blur-xl border border-gray-200/60 shadow-sm",
+  badgeDot: "w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 animate-pulse",
+  badgeText: "text-sm font-medium text-gray-700",
+  heading: "text-4xl lg:text-6xl xl:text-7xl font-bold leading-tight tracking-tight",
+  headingLine1: "bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent",
+  headingLine2: "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent",
+  headingLine3: "text-gray-600",
+  description: "text-xl lg:text-2xl text-gray-600 leading-relaxed max-w-2xl",
+  descriptionHighlight: "font-semibold text-gray-700",
+  ctaContainer: "flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-6",
+  primaryButton: "group relative inline-flex items-center justify-center gap-3 px-8 lg:px-10 py-4 lg:py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 overflow-hidden",
+  primaryButtonOverlay: "absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+  primaryButtonText: "relative",
+  primaryButtonIcon: "w-5 h-5 relative group-hover:translate-x-1 transition-transform duration-300",
+  secondaryButton: "group inline-flex items-center justify-center gap-2 px-8 lg:px-10 py-4 lg:py-5 rounded-2xl bg-white/80 backdrop-blur-xl border border-gray-200/60 text-gray-700 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 hover:border-gray-300/60",
+  secondaryButtonIcon: "w-5 h-5 group-hover:translate-y-0.5 transition-transform duration-300",
+  featuresGrid: "grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 pt-6 lg:pt-8",
+  featureItem: "flex items-center gap-3 group",
+  featureIcon: "w-12 h-12 rounded-xl bg-white/80 backdrop-blur-xl border border-gray-200/60 flex items-center justify-center text-xl shadow-lg group-hover:scale-110 transition-transform duration-300",
+  featureText: "",
+  featureLabel: "font-semibold text-gray-900",
+  featureDesc: "text-sm text-gray-600",
+  demoColumn: "relative w-full",
+  demoFloating1: "hidden sm:block absolute -top-6 -left-6 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 blur-xl opacity-60 animate-float-slow pointer-events-none",
+  demoFloating2: "hidden sm:block absolute -bottom-8 -right-8 w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-indigo-100 to-blue-100 blur-xl opacity-40 animate-float-medium pointer-events-none",
+  demoContainer: "relative group w-full",
+  demoCard: "bg-white/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-lg sm:shadow-2xl border border-gray-200/60 p-4 sm:p-6 md:p-8 transform transition-all duration-500 group-hover:scale-[1.02] group-hover:shadow-3xl w-full",
+  cardHeader: "flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 sm:pb-6 border-b border-gray-200/60 gap-3",
+  cardLogoContainer: "flex items-center gap-2 sm:gap-3",
+  cardLogo: "w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm",
+  cardClient: "flex flex-col",
+  cardClientName: "font-bold text-gray-900 text-base sm:text-lg",
+  cardClientGst: "text-xs sm:text-sm text-gray-500",
+  cardInvoiceInfo: "text-right mt-3 sm:mt-0",
+  cardInvoiceLabel: "text-xs font-semibold text-gray-500 uppercase tracking-wider",
+  cardInvoiceNumber: "font-bold text-gray-900 text-base sm:text-lg",
+  cardStatus: "text-xs sm:text-sm text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-full mt-1",
+  itemsContainer: "py-6 space-y-4",
+  itemRow: "flex justify-between items-center group/item hover:bg-gray-50/50 p-2 sm:p-3 rounded-lg transition-colors duration-200",
+  itemDot: "w-2 h-2 sm:w-2 sm:h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 group-hover/item:scale-150 transition-transform duration-300",
+  itemDescription: "text-gray-700 font-medium text-sm sm:text-base",
+  itemAmount: "font-semibold text-gray-900 text-sm sm:text-base",
+  calculationContainer: "space-y-3 pt-4 border-t border-gray-200/60",
+  calculationRow: "flex justify-between text-sm sm:text-base",
+  calculationLabel: "text-gray-600 text-sm sm:text-base",
+  calculationValue: "font-medium text-gray-900 text-sm sm:text-base",
+  totalRow: "flex justify-between text-lg sm:text-xl font-bold pt-3 border-t border-gray-200/60",
+  totalLabel: "text-gray-900",
+  totalValue: "bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent text-lg sm:text-xl font-bold",
+  actionButtons: "flex flex-col sm:flex-row gap-3 pt-6",
+  previewButton: "flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 group/btn text-sm sm:text-base",
+  previewButtonText: "group-hover/btn:translate-x-1 transition-transform duration-200 inline-block",
+  sendButton: "flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 group/btn text-sm sm:text-base",
+  sendButtonText: "group-hover/btn:translate-x-1 transition-transform duration-200 inline-block",
+  aiIndicator: "absolute -bottom-6 left-1/2 -translate-x-1/2 xl:translate-y-8 lg:translate-y-8 md:translate-y-3 translate-y-13 bg-white/90 backdrop-blur-xl rounded-2xl px-4 py-2 sm:px-4 sm:py-3 shadow-lg border border-gray-200/60 text-sm sm:text-base",
+  aiIndicatorContent: "flex items-center gap-2 text-sm sm:text-base text-gray-600",
+  aiIndicatorDot: "w-2 h-2 rounded-full bg-emerald-400 animate-pulse",
+  aiIndicatorText: "font-medium text-gray-900 text-sm sm:text-base",
+  cornerAccent1: "hidden sm:block absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 border-t-2 border-r-2 border-blue-500 rounded-tr-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+  cornerAccent2: "hidden sm:block absolute -bottom-2 -left-2 w-5 h-5 sm:w-6 sm:h-6 border-b-2 border-l-2 border-indigo-500 rounded-bl-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+  cardBackground: "absolute inset-0 -z-10 bg-gradient-to-br from-blue-50/30 to-indigo-100/20 rounded-2xl sm:rounded-3xl blur-xl transform scale-100 sm:scale-105",
+  scrollIndicator: "absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 translate-y-18 sm:translate-y-20",
+  scrollContainer: "flex flex-col items-center pt-10 gap-2 text-gray-400",
+  scrollText: "text-sm font-medium",
+  scrollBar: "w-5 h-8 sm:w-6 sm:h-10 border-2 border-gray-300 rounded-full flex justify-center",
+  scrollDot: "w-1 h-3 bg-gray-400 rounded-full mt-2 animate-bounce"
+};
+
+export const invoicePreviewStyles = {
+  pageContainer: "min-h-screen p-6 bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20",
+  container: "max-w-6xl mx-auto",
+  noPrint: "no-print",
+  headerContainer: "flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6",
+  headerTitle: "text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight",
+  headerSubtitle: "mt-2 text-lg text-gray-600",
+  headerInvoiceNumber: "font-semibold text-blue-600",
+  headerActions: "flex flex-wrap items-center gap-3",
+  sendReminderButton: "inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium",
+  editInvoiceButton: "inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium",
+  printButton: "inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg",
+  printArea: "print-preview-container",
+  printHeader: "print-preview-header",
+  companyInfo: "print-preview-company-info",
+  logo: "print-preview-logo",
+  invoiceFromLabel: "text-xs font-medium text-gray-500 uppercase tracking-wider mb-1",
+  companyName: "text-xl font-bold text-gray-900 mb-2",
+  companyAddress: "text-sm text-gray-600 print-preview-address mb-1",
+  companyContact: "flex flex-wrap gap-4 text-sm text-gray-600",
+  invoiceInfo: "print-preview-invoice-info",
+  invoiceTitle: "text-2xl font-bold text-gray-900 mb-2",
+  invoiceNumber: "text-lg text-gray-600 mb-4",
+  invoiceDetails: "space-y-2 text-sm",
+  invoiceDetailRow: "flex justify-between gap-6",
+  invoiceDetailLabel: "text-gray-600 font-medium",
+  invoiceDetailValue: "font-semibold text-gray-900",
+  statusPaid: "text-emerald-600",
+  statusUnpaid: "text-amber-600",
+  statusOverdue: "text-rose-600",
+  statusDraft: "text-gray-600",
+  section: "print-preview-section",
+  flexContainer: "print-preview-flex",
+  billToLabel: "text-xs font-medium text-gray-500 uppercase tracking-wider mb-2",
+  clientName: "font-semibold text-gray-900 text-lg",
+  clientDetails: "space-y-1",
+  clientText: "text-sm text-gray-600",
+  paymentDetailsLabel: "text-xs font-medium text-gray-500 uppercase tracking-wider mb-2",
+  paymentDetails: "space-y-2 text-sm",
+  paymentDetailRow: "flex justify-between",
+  paymentDetailLabel: "text-gray-600",
+  paymentDetailValue: "font-medium text-gray-900",
+  table: "print-preview-table",
+  tableHeader: "text-xs font-medium text-gray-500 uppercase tracking-wider",
+  tableCell: "font-medium",
+  tableCellRight: "text-right",
+  tableCellBold: "font-semibold",
+  notesLabel: "text-sm font-medium text-gray-700 mb-2",
+  notesContent: "text-sm text-gray-600 bg-gray-50 p-3 rounded border",
+  signatureLabel: "text-sm font-medium text-gray-700 mb-3",
+  signatureContainer: "text-center",
+  signatureImage: "print-preview-signature mx-auto",
+  signatureName: "font-semibold border-t border-gray-300 pt-1",
+  signatureTitle: "text-xs text-gray-500 mt-1",
+  stampLabel: "text-sm font-medium text-gray-700 mb-3",
+  stampContainer: "text-center",
+  stampImage: "print-preview-stamp mx-auto",
+  placeholderContainer: "h-16 flex items-center justify-center text-sm text-gray-400 border border-dashed border-gray-300 rounded",
+  totalsContainer: "print-preview-totals",
+  totalsRow: "flex justify-between",
+  totalsLabel: "text-sm font-medium text-gray-700",
+  totalsValue: "text-sm font-medium text-gray-900",
+  totalDivider: "border-t border-gray-300 my-2 pt-2",
+  totalAmountLabel: "text-lg font-bold text-gray-900",
+  totalAmountValue: "text-lg font-bold text-gray-900",
+  footer: "print-preview-section border-t border-gray-300 pt-4",
+  footerText: "text-center text-sm text-gray-500",
+  footerSubText: "text-center text-xs text-gray-400 mt-2",
+  emptyStateContainer: "max-w-4xl mx-auto",
+  emptyStateCard: "bg-white/80 backdrop-blur-xl rounded-2xl p-8 border border-gray-200/60 shadow-sm text-center",
+  emptyStateIconContainer: "w-16 h-16 mx-auto bg-rose-100 rounded-full flex items-center justify-center text-rose-600 mb-4",
+  emptyStateIcon: "w-8 h-8",
+  emptyStateTitle: "text-xl font-semibold text-gray-900",
+  emptyStateMessage: "text-gray-600 mt-2 max-w-md mx-auto",
+  emptyStateButton: "inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg"
+};
+
+export const pricingStyles = {
+  section: "relative py-24 bg-gradient-to-b from-gray-50 to-white overflow-hidden",
+  bgElement1: "absolute top-0 left-0 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob",
+  bgElement2: "absolute top-0 right-0 w-72 h-72 bg-indigo-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000",
+  bgElement3: "absolute -bottom-8 left-20 w-72 h-72 bg-indigo-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000",
+  container: "relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+  headerContainer: "text-center max-w-3xl mx-auto mb-16",
+  badge: "inline-flex items-center px-4 py-2 rounded-full bg-blue-50 border border-blue-100 mb-6",
+  badgeDot: "w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse",
+  badgeText: "text-sm font-medium text-blue-700",
+  title: "text-2xl md:text-5xl lg:text-5xl xl:text-5xl font-bold text-gray-900 tracking-tight mb-6",
+  titleGradient: "bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent",
+  description: "text-md md:text-xl lg:text-xl xl:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto mb-8",
+  billingToggle: "inline-flex items-center bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-gray-200/60 shadow-sm",
+  billingButton: "px-6 py-3 rounded-xl font-semibold transition-all duration-300",
+  billingButtonActive: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg",
+  billingButtonInactive: "text-gray-600 hover:text-gray-900",
+  billingBadge: "ml-2 text-sm line-clamp-2 md:line-clamp-0 lg:line-clamp-0 xl:line-clamp-0 bg-blue-100 text-blue-700 px-2 py-1 rounded-full",
+  grid: "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-10 lg:gap-6 relative",
+  additionalInfo: "mt-16 text-center",
+  featuresCard: "bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/60 shadow-sm max-w-2xl mx-auto",
+  featuresTitle: "text-2xl font-bold text-gray-900 mb-4",
+  featuresGrid: "grid sm:grid-cols-2 gap-4 text-gray-600",
+  featureItem: "flex items-center gap-3",
+  featureDot: "w-2 h-2 rounded-full bg-blue-500",
+  faqCta: "mt-12 text-center",
+  faqText: "text-gray-600 mb-6",
+  contactLink: "text-blue-600 font-semibold hover:text-blue-700 transition-colors duration-300"
+};
+
+export const pricingCardStyles = {
+  card: "group relative bg-white/80 backdrop-blur-sm rounded-3xl p-8 border transition-all duration-500 ease-out hover:-translate-y-2 overflow-hidden",
+  cardPopular: "border-blue-300/60 border-4 shadow-2xl scale-105 overflow-visible z-10",
+  cardRegular: "border-white/60 border-4 shadow-sm hover:shadow-2xl overflow-hidden",
+  popularBadge: "absolute -top-4 left-1/2 -translate-x-1/2 z-40",
+  popularBadgeContent: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold shadow-lg",
+  gradientOverlay: "absolute inset-0 bg-gradient-to-br from-blue-50/30 to-indigo-50/20 opacity-60 z-0 pointer-events-none rounded-3xl",
+  animatedBorder: "absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-5 transition-opacity duration-500 z-10",
+  content: "relative z-20",
+  header: "text-center mb-8",
+  title: "text-2xl font-bold",
+  titlePopular: "text-gray-900",
+  titleRegular: "text-gray-800",
+  description: "text-gray-600 mt-2",
+  priceContainer: "text-center mb-8",
+  priceWrapper: "flex items-baseline justify-center gap-1",
+  price: "text-4xl lg:text-5xl font-bold",
+  pricePopular: "bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent",
+  priceRegular: "text-gray-900",
+  period: "text-gray-500 text-lg",
+  annualBadge: "text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1 rounded-full mt-2 inline-block",
+  featuresList: "space-y-4 mb-8",
+  featureItem: "flex items-center gap-3 text-gray-600",
+  featureIcon: "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0",
+  featureIconPopular: "bg-blue-100 text-blue-600",
+  featureIconRegular: "bg-gray-100 text-gray-500",
+  featureText: "text-sm lg:text-base",
+  ctaButton: "w-full py-4 px-6 rounded-3xl font-semibold transition-all cursor-pointer duration-300 group/btn",
+  ctaButtonPopular: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transform",
+  ctaButtonRegular: "bg-white border border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50",
+  ctaButtonText: "inline-block transition-transform duration-300",
+  ctaButtonTextPopular: "group-hover/btn:translate-x-1",
+  ctaButtonTextRegular: "group-hover/btn:translate-y-0.5",
+  cornerAccent1: "absolute -top-2 -right-2 w-6 h-6 border-t-2 border-r-2 border-blue-500 rounded-tr-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-30",
+  cornerAccent2: "absolute -bottom-2 -left-2 w-6 h-6 border-b-2 border-l-2 border-indigo-500 rounded-bl-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-30"
+};
+
+export const authStyles = {
+  pageContainer: "min-h-screen bg-white text-gray-800 antialiased",
+  authContainer: "flex items-center justify-center py-24 px-6",
+  authCard: "w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8",
+  authTitle: "text-2xl font-semibold mb-1",
+  authSubtitle: "text-sm text-gray-500 mb-6",
+  errorContainer: "mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-100 p-3 rounded",
+  form: "space-y-4",
+  formField: "block text-sm font-medium text-gray-700 mb-2",
+  input: "w-full rounded-md border border-gray-200 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-200",
+  passwordContainer: "relative",
+  passwordInput: "w-full rounded-md border border-gray-200 px-3 py-2 pr-10 outline-none focus:ring-2 focus:ring-indigo-200",
+  passwordToggle: "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-500 hover:text-gray-700 focus:outline-none",
+  submitButton: "w-full inline-flex justify-center items-center px-4 py-2 rounded-md bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition",
+  submitButtonDisabled: "disabled:opacity-50 disabled:cursor-not-allowed",
+  footerContainer: "mt-6 text-center text-sm text-gray-600",
+  footerLink: "text-indigo-600 hover:underline",
+  eyeIcon: "w-5 h-5",
+  eyeOffIcon: "w-5 h-5"
+};
+
+export const navbarStyles = {
+  header: "fixed w-full z-30 bg-white/80 backdrop-blur-sm border-b border-gray-100",
+  container: "max-w-7xl mx-auto px-6",
+  nav: "flex items-center justify-between h-16",
+  logoSection: "flex items-center gap-4",
+  logoLink: "inline-flex items-center",
+  logoImage: "h-12 w-12 object-contain",
+  logoText: "font-semibold text-lg tracking-tight",
+  desktopNav: "hidden md:flex items-center space-x-6 ml-6",
+  navLink: "text-sm hover:text-indigo-600 transition",
+  navLinkInactive: "text-gray-600 hover:text-indigo-600 transition",
+  authSection: "hidden md:flex items-center gap-4",
+  signInButton: "text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200 px-4 py-2 rounded-2xl hover:bg-gray-50/80 backdrop-blur-sm",
+  signUpButton: "group relative inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 overflow-hidden",
+  signUpOverlay: "absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+  signUpText: "relative",
+  signUpIcon: "w-4 h-4 relative group-hover:translate-x-1 transition-transform duration-300",
+  mobileMenuButton: "md:hidden p-3 rounded-2xl bg-white/80 backdrop-blur-sm border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105",
+  mobileMenuIcon: "relative w-6 h-6",
+  mobileMenuLine1: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-0.5 bg-gray-700 rounded-full transition-all duration-300",
+  mobileMenuLine1Open: "rotate-45 translate-y-0",
+  mobileMenuLine1Closed: "-translate-y-1",
+  mobileMenuLine2: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-0.5 bg-gray-700 rounded-full transition-all duration-300",
+  mobileMenuLine2Open: "opacity-0",
+  mobileMenuLine2Closed: "opacity-100",
+  mobileMenuLine3: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-0.5 bg-gray-700 rounded-full transition-all duration-300",
+  mobileMenuLine3Open: "-rotate-45 translate-y-0",
+  mobileMenuLine3Closed: "translate-y-1",
+  mobileMenu: "md:hidden border-t border-gray-100 bg-white/95",
+  mobileMenuContainer: "px-6 py-4 space-y-3",
+  mobileNavLink: "block text-gray-700",
+  mobileAuthSection: "pt-2",
+  mobileSignIn: "block text-gray-700 py-2",
+  mobileSignUp: "block mt-2 px-4 py-2 rounded-md bg-indigo-600 text-white text-center"
+};
+
+export const kpiCardStyles = {
+  cardContainer: "group relative bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/60 shadow-sm hover:shadow-xl transition-all duration-500 ease-out hover:scale-[1.02] hover:border-gray-300/60 overflow-hidden",
+  animatedBackground: "absolute inset-0 bg-gradient-to-br from-blue-50/0 via-indigo-50/0 to-blue-50/0 group-hover:from-blue-50/30 group-hover:via-indigo-50/20 group-hover:to-blue-50/10 transition-all duration-500 ease-out",
+  cornerAccent: "absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-blue-500/5 to-transparent rounded-bl-2xl",
+  content: "relative z-10",
+  headerContainer: "flex items-center justify-between",
+  mainContent: "flex-1 min-w-0",
+  iconTrendContainer: "flex items-center gap-3 mb-3",
+  iconContainer: "p-3 rounded-xl bg-gradient-to-br shadow-lg group-hover:scale-110 transition-transform duration-300",
+  icon: "w-5 h-5 text-white",
+  trendBadge: "inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium",
+  trendBadgePositive: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  trendBadgeNegative: "text-rose-600 bg-rose-50 border-rose-200",
+  trendBadgeNeutral: "text-gray-600 bg-gray-50 border-gray-200",
+  trendIcon: "w-3 h-3",
+  trendIconNegative: "rotate-180",
+  textContent: "space-y-2",
+  title: "text-sm font-medium text-gray-600 tracking-wide uppercase",
+  value: "text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight",
+  hint: "text-xs text-gray-500 font-medium flex items-center gap-1",
+  hintIcon: "w-3 h-3",
+  progressContainer: "mt-4 space-y-2",
+  progressLabels: "flex justify-between text-xs text-gray-500",
+  progressBar: "w-full bg-gray-200/60 rounded-full h-1.5 overflow-hidden",
+  progressFill: "h-1.5 rounded-full bg-gradient-to-r transition-all duration-1000 ease-out",
+  iconColors: {
+    default: "from-blue-500 to-indigo-600",
+    revenue: "from-blue-500 to-indigo-600",
+    growth: "from-blue-500 to-indigo-600",
+    document: "from-indigo-500 to-blue-600",
+    clock: "from-amber-500 to-orange-600"
+  },
+  progressWidths: {
+    revenue: "75%",
+    growth: "85%",
+    default: "65%"
   }
-}
+};
 
-function formatDate(dateInput) {
-  if (!dateInput) return "—";
-  const d = dateInput instanceof Date ? dateInput : new Date(String(dateInput));
-  if (Number.isNaN(d.getTime())) return "—";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
+export const loginStyles = {
+  root: "min-h-screen bg-white text-gray-800 antialiased",
+  container: "flex items-center justify-center py-24 px-6",
+  formContainer: "w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8",
+  title: "text-2xl font-semibold mb-1",
+  subtitle: "text-sm text-gray-500 mb-6",
+  error: "mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-100 p-3 rounded",
+  form: "space-y-4",
+  formGroup: "",
+  label: "block text-sm font-medium text-gray-700 mb-2",
+  input: "w-full rounded-md border border-gray-200 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-200",
+  passwordContainer: "relative",
+  passwordInput: "w-full rounded-md border border-gray-200 px-3 py-2 pr-10 outline-none focus:ring-2 focus:ring-indigo-200",
+  passwordToggle: "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-500 hover:text-gray-700 focus:outline-none",
+  passwordIcon: "w-5 h-5",
+  formOptions: "flex items-center justify-between text-sm",
+  rememberContainer: "inline-flex items-center gap-2",
+  rememberCheckbox: "rounded border-gray-200",
+  rememberText: "text-gray-600",
+  forgotPassword: "text-indigo-600 hover:underline",
+  submitButton: "w-full inline-flex justify-center items-center px-4 py-2 rounded-md bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition",
+  signupContainer: "mt-6 text-center text-sm text-gray-600",
+  signupLink: "text-indigo-600 hover:underline"
+};
 
-function normalizeClient(raw) {
-  if (!raw) return { name: "", email: "", address: "", phone: "" };
-  if (typeof raw === "string")
-    return { name: raw, email: "", address: "", phone: "" };
-  if (typeof raw === "object") {
-    return {
-      name: raw.name ?? raw.company ?? raw.client ?? "",
-      email: raw.email ?? raw.emailAddress ?? "",
-      address: raw.address ?? raw.addr ?? raw.clientAddress ?? "",
-      phone: raw.phone ?? raw.contact ?? raw.mobile ?? "",
-    };
-  }
-  return { name: "", email: "", address: "", phone: "" };
-}
-
-/* ----------------- icons ----------------- */
-const PrintIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-    <path d="M6 14h12v8H6z" />
-  </svg>
-);
-const EditIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
-const ArrowLeftIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <path d="M19 12H5M12 19l-7-7 7-7" />
-  </svg>
-);
-
-/* ----------------- component ----------------- */
-export default function InvoicePreview() {
-  const { id } = useParams();
-  const loc = useLocation();
-  const navigate = useNavigate();
-
-  const { getToken, isSignedIn } = useAuth
-    ? useAuth()
-    : { getToken: null, isSignedIn: false };
-
-  const invoiceFromState = loc?.state?.invoice ?? null;
-  const [invoice, setInvoice] = useState(() =>
-    invoiceFromState ? invoiceFromState : null
-  );
-  const [loadingInvoice, setLoadingInvoice] = useState(
-    !invoiceFromState && Boolean(id)
-  );
-  const [invoiceError, setInvoiceError] = useState(null);
-
-  const [profile, setProfile] = useState(
-    () => readJSON("business_profile", defaultProfile) || defaultProfile
-  );
-  const [profileLoading, setProfileLoading] = useState(false);
-
-  const prevTitleRef = useRef(document.title);
-
-  const obtainToken = useCallback(async () => {
-    if (typeof getToken !== "function") return null;
-    try {
-      let token = await getToken({ template: "default" }).catch(() => null);
-      if (!token)
-        token = await getToken({ forceRefresh: true }).catch(() => null);
-      return token;
-    } catch {
-      return null;
-    }
-  }, [getToken]);
-
-
-  useEffect(() => {
-    let mounted = true;
-    async function fetchInvoice() {
-      if (!id || invoiceFromState) return;
-      setLoadingInvoice(true);
-      setInvoiceError(null);
-      try {
-        const token = await obtainToken();
-        const headers = { Accept: "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
-        const res = await fetch(INVOICE_ENDPOINT(id), {
-          method: "GET",
-          headers,
-        });
-        if (res.ok) {
-          const json = await res.json().catch(() => null);
-          const data = json?.data ?? json ?? null;
-          if (mounted && data) {
-            const normalized = {
-              ...data,
-              id: data._id ?? data.id ?? id,
-              items: Array.isArray(data.items)
-                ? data.items
-                : data.items
-                ? [...data.items]
-                : [],
-              invoiceNumber: data.invoiceNumber ?? data.invoiceNumber ?? "",
-              currency: data.currency || "INR",
-            };
-            setInvoice(normalized);
-            return;
-          }
-        } else {
-          console.warn("Failed to fetch invoice from server:", res.status);
-        }
-      } catch (err) {
-        console.warn("Error fetching invoice:", err);
-      } finally {
-        if (!mounted) return;
-        const all = getStoredInvoices();
-        const found = all.find(
-          (x) => x && (x.id === id || x._id === id || x.invoiceNumber === id)
-        );
-        if (found) setInvoice(found);
-        else setInvoiceError("Invoice not found");
-        setLoadingInvoice(false);
-      }
-    }
-    fetchInvoice();
-    return () => {
-      mounted = false;
-    };
-  }, [id, invoiceFromState, obtainToken]);
-
-
-  useEffect(() => {
-    let mounted = true;
-    async function fetchProfile() {
-      setProfileLoading(true);
-      try {
-        const token = await obtainToken();
-        const headers = { Accept: "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
-        const res = await fetch(PROFILE_ENDPOINT, { method: "GET", headers });
-        if (!res.ok) {
-          console.warn("Profile fetch returned non-ok:", res.status);
-          setProfileLoading(false);
-          return;
-        }
-        const json = await res.json().catch(() => null);
-        const data = json?.data ?? json ?? null;
-        if (mounted && data && typeof data === "object") {
-          const normalized = {
-            businessName:
-              data.businessName ?? data.name ?? defaultProfile.businessName,
-            email: data.email ?? defaultProfile.email,
-            address: data.address ?? defaultProfile.address,
-            phone: data.phone ?? defaultProfile.phone,
-            gst: data.gst ?? defaultProfile.gst,
-            stampDataUrl:
-              data.stampUrl ?? data.stampDataUrl ?? defaultProfile.stampDataUrl,
-            signatureDataUrl:
-              data.signatureUrl ??
-              data.signatureDataUrl ??
-              defaultProfile.signatureDataUrl,
-            logoDataUrl:
-              data.logoUrl ?? data.logoDataUrl ?? defaultProfile.logoDataUrl,
-            defaultTaxPercent: Number.isFinite(Number(data.defaultTaxPercent))
-              ? Number(data.defaultTaxPercent)
-              : defaultProfile.defaultTaxPercent,
-            signatureName:
-              data.signatureOwnerName ??
-              data.signatureName ??
-              defaultProfile.signatureName,
-            signatureTitle:
-              data.signatureOwnerTitle ??
-              data.signatureTitle ??
-              defaultProfile.signatureTitle,
-          };
-          setProfile(normalized);
-          try {
-            writeJSON("business_profile", normalized);
-          } catch {}
-        }
-      } catch (err) {
-        console.warn("Error fetching profile:", err);
-      } finally {
-        if (mounted) setProfileLoading(false);
-      }
-    }
-
-    const stored = readJSON("business_profile", null);
-    if (!stored) fetchProfile();
-    return () => {
-      mounted = false;
-    };
-  }, [obtainToken]);
-
-
-  useEffect(() => {
-    if (!invoice) return;
-    const invoiceNumber =
-      invoice.invoiceNumber || invoice.id || `invoice-${Date.now()}`;
-    const safe = `Invoice-${String(invoiceNumber).replace(
-      /[^\w\-_.() ]/g,
-      "_"
-    )}`;
-    const prev = prevTitleRef.current ?? document.title;
-    if (document.title !== safe) document.title = safe;
-    return () => {
-      try {
-        document.title = prev;
-      } catch {}
-    };
-  }, [invoice]);
-
-
-  const handlePrint = useCallback(() => {
-    const invoiceNumber =
-      (invoice && (invoice.invoiceNumber || invoice.id)) ||
-      `invoice-${Date.now()}`;
-    const safe = `Invoice-${String(invoiceNumber).replace(
-      /[^\w\-_.() ]/g,
-      "_"
-    )}`;
-
-    const prevTitle = document.title;
-    document.title = safe;
-    window.print();
-
-    // Restore title after a delay
-    setTimeout(() => {
-      document.title = prevTitle;
-    }, 500);
-  }, [invoice]);
-
-  if (!invoice && (loadingInvoice || profileLoading)) {
-    return <div className="p-6">Loading…</div>;
-  }
-  if (!invoice) {
-    return (
-      <div className={invoicePreviewStyles.pageContainer}>
-        <div className={invoicePreviewStyles.emptyStateContainer}>
-          <div className={invoicePreviewStyles.emptyStateCard}>
-            <div className={invoicePreviewStyles.emptyStateIconContainer}>
-              <svg
-                className={invoicePreviewStyles.emptyStateIcon}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="15" y1="9" x2="9" y2="15" />
-                <line x1="9" y1="9" x2="15" y2="15" />
-              </svg>
-            </div>
-            <h3 className={invoicePreviewStyles.emptyStateTitle}>
-              Invoice Not Found
-            </h3>
-            <p className={invoicePreviewStyles.emptyStateMessage}>
-              The invoice you're looking for doesn't exist or may have been
-              deleted.
-            </p>
-            <div className="mt-6">
-              <button
-                onClick={() => navigate(-1)}
-                className={invoicePreviewStyles.emptyStateButton}
-              >
-                <ArrowLeftIcon className="w-4 h-4" /> Back to Invoices
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const items = (
-    invoice.items && Array.isArray(invoice.items) ? invoice.items : []
-  ).filter(Boolean);
-  const subtotal = items.reduce(
-    (s, it) => s + Number(it.qty || 0) * Number(it.unitPrice || 0),
-    0
-  );
-  const taxPercent = Number(
-    invoice.taxPercent ?? profile.defaultTaxPercent ?? 18
-  );
-  const tax = (subtotal * taxPercent) / 100;
-  const total = subtotal + tax;
-
-  const logo = resolveImageUrl(
-    invoice.logoDataUrl ?? profile.logoDataUrl ?? null
-  );
-  const stamp = resolveImageUrl(
-    invoice.stampDataUrl ?? profile.stampDataUrl ?? null
-  );
-  const signature = resolveImageUrl(
-    invoice.signatureDataUrl ?? profile.signatureDataUrl ?? null
-  );
-
-  const signatureName = invoice.signatureName ?? profile.signatureName ?? "";
-  const signatureTitle = invoice.signatureTitle ?? profile.signatureTitle ?? "";
-
-  const client = normalizeClient(invoice.client);
-  const invoiceCurrency = invoice.currency || "INR";
-
-
-  return (
-    <div className={invoicePreviewStyles.pageContainer}>
-      <div className={invoicePreviewStyles.container}>
-        {/* Header Actions */}
-        <div
-          className={`${invoicePreviewStyles.headerContainer} ${invoicePreviewStyles.noPrint}`}
-        >
-          <div>
-            <h1 className={invoicePreviewStyles.headerTitle}>
-              Invoice Preview
-            </h1>
-            <p className={invoicePreviewStyles.headerSubtitle}>
-              Review invoice{" "}
-              <span className={invoicePreviewStyles.headerInvoiceNumber}>
-                #{invoice.invoiceNumber || invoice.id}
-              </span>
-            </p>
-          </div>
-
-          <div className={invoicePreviewStyles.headerActions}>
-            <button
-              onClick={() =>
-                navigate(`/app/invoices/${invoice.id}/edit`, {
-                  state: { invoice },
-                })
-              }
-              className={invoicePreviewStyles.editInvoiceButton}
-            >
-              <EditIcon className="w-4 h-4" /> Edit Invoice
-            </button>
-
-            <button
-              onClick={handlePrint}
-              className={invoicePreviewStyles.printButton}
-            >
-              <PrintIcon className="w-4 h-4" /> Print / Save as PDF
-            </button>
-          </div>
-        </div>
-
-        {/* Printable invoice area */}
-        <div id="print-area" className={invoicePreviewStyles.printArea}>
-          <div className={invoicePreviewStyles.printHeader}>
-            <div className={invoicePreviewStyles.companyInfo}>
-              {logo && (
-                <img
-                  src={logo}
-                  alt="Company Logo"
-                  className={invoicePreviewStyles.logo}
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              )}
-              <div>
-                <div className={invoicePreviewStyles.invoiceFromLabel}>
-                  Invoice From
-                </div>
-                <div className={invoicePreviewStyles.companyName}>
-                  {invoice.fromBusinessName || profile.businessName || "—"}
-                </div>
-                <div className={invoicePreviewStyles.companyAddress}>
-                  {invoice.fromAddress || profile.address || "—"}
-                </div>
-                <div className={invoicePreviewStyles.companyContact}>
-                  {invoice.fromEmail || profile.email ? (
-                    <div>
-                      <strong>Email:</strong>{" "}
-                      {invoice.fromEmail || profile.email}
-                    </div>
-                  ) : null}
-                  {invoice.fromPhone || profile.phone ? (
-                    <div>
-                      <strong>Phone:</strong>{" "}
-                      {invoice.fromPhone || profile.phone}
-                    </div>
-                  ) : null}
-                  {invoice.fromGst || profile.gst ? (
-                    <div>
-                      <strong>GST:</strong> {invoice.fromGst || profile.gst}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            <div className={invoicePreviewStyles.invoiceInfo}>
-              <div className={invoicePreviewStyles.invoiceTitle}>INVOICE</div>
-              <div className={invoicePreviewStyles.invoiceNumber}>
-                #{invoice.invoiceNumber || invoice.id}
-              </div>
-
-              <div className={invoicePreviewStyles.invoiceDetails}>
-                <div className={invoicePreviewStyles.invoiceDetailRow}>
-                  <span className={invoicePreviewStyles.invoiceDetailLabel}>
-                    Invoice Date:
-                  </span>
-                  <span className={invoicePreviewStyles.invoiceDetailValue}>
-                    {invoice.issueDate ? formatDate(invoice.issueDate) : "—"}
-                  </span>
-                </div>
-                <div className={invoicePreviewStyles.invoiceDetailRow}>
-                  <span className={invoicePreviewStyles.invoiceDetailLabel}>
-                    Due Date:
-                  </span>
-                  <span className={invoicePreviewStyles.invoiceDetailValue}>
-                    {invoice.dueDate ? formatDate(invoice.dueDate) : "—"}
-                  </span>
-                </div>
-                <div className={invoicePreviewStyles.invoiceDetailRow}>
-                  <span className={invoicePreviewStyles.invoiceDetailLabel}>
-                    Status:
-                  </span>
-                  <span
-                    className={`${invoicePreviewStyles.invoiceDetailValue} ${
-                      invoice.status === "paid"
-                        ? invoicePreviewStyles.statusPaid
-                        : invoice.status === "unpaid"
-                        ? invoicePreviewStyles.statusUnpaid
-                        : invoice.status === "overdue"
-                        ? invoicePreviewStyles.statusOverdue
-                        : invoicePreviewStyles.statusDraft
-                    }`}
-                  >
-                    {invoice.status
-                      ? invoice.status.charAt(0).toUpperCase() +
-                        invoice.status.slice(1)
-                      : "Draft"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Client & Payment Details */}
-          <div className={invoicePreviewStyles.section}>
-            <div className={invoicePreviewStyles.flexContainer}>
-              <div className="flex-1">
-                <div className={invoicePreviewStyles.billToLabel}>Bill To</div>
-                <div className={invoicePreviewStyles.clientDetails}>
-                  <div className={invoicePreviewStyles.clientName}>
-                    {client.name || "Client Name"}
-                  </div>
-                  {client.address && (
-                    <div className={invoicePreviewStyles.clientText}>
-                      {client.address}
-                    </div>
-                  )}
-                  {client.email && (
-                    <div className={invoicePreviewStyles.clientText}>
-                      {client.email}
-                    </div>
-                  )}
-                  {client.phone && (
-                    <div className={invoicePreviewStyles.clientText}>
-                      {client.phone}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex-1">
-                <div className={invoicePreviewStyles.paymentDetailsLabel}>
-                  Payment Details
-                </div>
-                <div className={invoicePreviewStyles.paymentDetails}>
-                  <div className={invoicePreviewStyles.paymentDetailRow}>
-                    <span className={invoicePreviewStyles.paymentDetailLabel}>
-                      Currency:
-                    </span>
-                    <span className={invoicePreviewStyles.paymentDetailValue}>
-                      {invoiceCurrency}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Items Table */}
-          <div className={invoicePreviewStyles.section}>
-            <div className="overflow-x-auto">
-              <table className={invoicePreviewStyles.table}>
-                <thead>
-                  <tr>
-                    <th style={{ width: "50%", minWidth: "150px" }}>
-                      Description
-                    </th>
-                    <th
-                      style={{
-                        width: "15%",
-                        textAlign: "right",
-                        minWidth: "70px",
-                      }}
-                    >
-                      Quantity
-                    </th>
-                    <th
-                      style={{
-                        width: "20%",
-                        textAlign: "right",
-                        minWidth: "90px",
-                      }}
-                    >
-                      Unit Price
-                    </th>
-                    <th
-                      style={{
-                        width: "15%",
-                        textAlign: "right",
-                        minWidth: "80px",
-                      }}
-                    >
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length ? (
-                    items.map((it, idx) => (
-                      <tr key={it.id || idx}>
-                        <td className={invoicePreviewStyles.tableCell}>
-                          {it.description || "Item Description"}
-                        </td>
-                        <td style={{ textAlign: "right" }}>{it.qty || 0}</td>
-                        <td style={{ textAlign: "right" }}>
-                          {currencyFmt(it.unitPrice, invoiceCurrency)}
-                        </td>
-                        <td style={{ textAlign: "right", fontWeight: "600" }}>
-                          {currencyFmt(
-                            Number(it.qty || 0) * Number(it.unitPrice || 0),
-                            invoiceCurrency
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="4"
-                        style={{
-                          textAlign: "center",
-                          padding: "20px",
-                          color: "#6b7280",
-                        }}
-                      >
-                        No items added to this invoice
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Notes */}
-          {invoice.notes && (
-            <div className={invoicePreviewStyles.section}>
-              <div className={invoicePreviewStyles.notesLabel}>Notes</div>
-              <div className={invoicePreviewStyles.notesContent}>
-                {invoice.notes}
-              </div>
-            </div>
-          )}
-
-          {/* Totals, Signature, Stamp */}
-          <div className={invoicePreviewStyles.section}>
-            <div className={invoicePreviewStyles.flexContainer}>
-              <div className="flex-1">
-                <div className={invoicePreviewStyles.signatureLabel}>
-                  Authorized Signature
-                </div>
-                {signature ? (
-                  <div className={invoicePreviewStyles.signatureContainer}>
-                    <img
-                      src={signature}
-                      alt="Authorized Signature"
-                      className={invoicePreviewStyles.signatureImage}
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                    {(signatureName || signatureTitle) && (
-                      <div className="mt-2 text-sm text-gray-700">
-                        <div className={invoicePreviewStyles.signatureName}>
-                          {signatureName}
-                        </div>
-                        {signatureTitle && (
-                          <div className={invoicePreviewStyles.signatureTitle}>
-                            {signatureTitle}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className={invoicePreviewStyles.placeholderContainer}>
-                    No Signature
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 text-center">
-                <div className={invoicePreviewStyles.stampLabel}>
-                  Company Stamp
-                </div>
-                {stamp ? (
-                  <img
-                    src={stamp}
-                    alt="Company Stamp"
-                    className={invoicePreviewStyles.stampImage}
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className={invoicePreviewStyles.placeholderContainer}>
-                    No Stamp
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1">
-                <div className={invoicePreviewStyles.totalsContainer}>
-                  <div className="space-y-2">
-                    <div className={invoicePreviewStyles.totalsRow}>
-                      <span className={invoicePreviewStyles.totalsLabel}>
-                        Subtotal
-                      </span>
-                      <span className={invoicePreviewStyles.totalsValue}>
-                        {currencyFmt(subtotal, invoiceCurrency)}
-                      </span>
-                    </div>
-                    <div className={invoicePreviewStyles.totalsRow}>
-                      <span className={invoicePreviewStyles.totalsLabel}>
-                        Tax ({taxPercent}%)
-                      </span>
-                      <span className={invoicePreviewStyles.totalsValue}>
-                        {currencyFmt(tax, invoiceCurrency)}
-                      </span>
-                    </div>
-                    <div className={invoicePreviewStyles.totalDivider}>
-                      <div className={invoicePreviewStyles.totalsRow}>
-                        <span className={invoicePreviewStyles.totalAmountLabel}>
-                          Total Amount
-                        </span>
-                        <span className={invoicePreviewStyles.totalAmountValue}>
-                          {currencyFmt(total, invoiceCurrency)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className={invoicePreviewStyles.footer}>
-            <div className={invoicePreviewStyles.footerText}>
-              {invoice.terms ||
-                invoice.footnote ||
-                "Thank you for your business. We appreciate your trust in our services."}
-            </div>
-            <div className={invoicePreviewStyles.footerSubText}>
-              Invoice generated by InvoiceAI • {formatDate(new Date())}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+export const footerStyles = {
+  footer: "mt-24 border-t border-gray-100 bg-white",
+  container: "max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6 sm:py-8 flex flex-col md:flex-row justify-center md:justify-between items-center gap-4 md:gap-0",
+  copyright: "text-xs sm:text-sm md:text-sm lg:text-base text-gray-600 text-center md:text-left",
+  links: "flex flex-col md:flex-row items-center gap-2 md:gap-4 lg:gap-6 mt-2 md:mt-0",
+  link: "text-sm md:text-sm lg:text-base text-gray-600 hover:text-indigo-600 transition-colors duration-200"
+};
