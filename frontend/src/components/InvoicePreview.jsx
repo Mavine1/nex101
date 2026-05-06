@@ -3,7 +3,6 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { invoicePreviewStyles } from "../assets/dummyStyles";
 import StatusBadge from "../components/StatusBadge";
-import AiReminderModal from "../components/AiReminderModal";
 
 const API_BASE = "http://localhost:4000";
 
