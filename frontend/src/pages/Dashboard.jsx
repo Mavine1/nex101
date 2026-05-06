@@ -367,7 +367,6 @@
                
 import React, { useState, useEffect } from "react";
 import { useUser } from "@clerk/clerk-react";
-
 const Dashboard = () => {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
