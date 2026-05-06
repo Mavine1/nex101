@@ -460,7 +460,6 @@ const Dashboard = () => {
           </button>
         </div>
       )}
-
       {/* Invoices List */}
       {!loading && !error && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
