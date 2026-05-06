@@ -46,7 +46,7 @@ const App = () => {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="create-invoice" element={<CreateInvoice />} />
           <Route path="invoices" element={<Invoices />} />
-          <Route path="invoices/:id" element={<Invoices />} /> {/* optional: for single invoice view */}
+          <Route path="invoices/:id" element={<Invoices />} />
           <Route path="business" element={<BusinessProfile />} />
         </Route>
 
