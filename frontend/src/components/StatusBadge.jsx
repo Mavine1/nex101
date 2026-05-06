@@ -1,3 +1,6 @@
+import React from 'react';
+
+// ---------- Icon Components ----------
 const StatusIcons = {
   paid: ({ className = "w-3 h-3" }) => (
     <svg
@@ -50,47 +53,101 @@ const StatusIcons = {
   ),
 };
 
+// ---------- Status Style Configuration ----------
+const statusConfig = {
+  paid: {
+    bg: "bg-emerald-50/80 backdrop-blur-sm",
+    text: "text-emerald-700",
+    border: "border-emerald-200",
+    icon: "paid",
+    gradient: "from-emerald-400 to-green-500",
+  },
+  unpaid: {
+    bg: "bg-amber-50/80 backdrop-blur-sm",
+    text: "text-amber-700",
+    border: "border-amber-200",
+    icon: "unpaid",
+    gradient: "from-amber-400 to-orange-500",
+  },
+  overdue: {
+    bg: "bg-rose-50/80 backdrop-blur-sm",
+    text: "text-rose-700",
+    border: "border-rose-200",
+    icon: "overdue",
+    gradient: "from-rose-400 to-red-500",
+  },
+  draft: {
+    bg: "bg-gray-50/80 backdrop-blur-sm",
+    text: "text-gray-700",
+    border: "border-gray-200",
+    icon: "draft",
+    gradient: "from-gray-400 to-gray-500",
+  },
+  default: {
+    bg: "bg-gray-50/80 backdrop-blur-sm",
+    text: "text-gray-700",
+    border: "border-gray-200",
+    icon: "draft",
+    gradient: "from-gray-400 to-gray-500",
+  },
+};
 
-  const statusConfig = {
-    paid: {
-      bg: "bg-emerald-50/80 backdrop-blur-sm",
-      text: "text-emerald-700",
-      border: "border-emerald-200",
-      icon: "paid",
-      gradient: "from-emerald-400 to-green-500",
-    },
-    unpaid: {
-      bg: "bg-amber-50/80 backdrop-blur-sm",
-      text: "text-amber-700",
-      border: "border-amber-200",
-      icon: "unpaid",
-      gradient: "from-amber-400 to-orange-500",
-    },
-    overdue: {
-      bg: "bg-rose-50/80 backdrop-blur-sm",
-      text: "text-rose-700",
-      border: "border-rose-200",
-      icon: "overdue",
-      gradient: "from-rose-400 to-red-500",
-    },
-    draft: {
-      bg: "bg-gray-50/80 backdrop-blur-sm",
-      text: "text-gray-700",
-      border: "border-gray-200",
-      icon: "draft",
-      gradient: "from-gray-400 to-gray-500",
-    },
-    default: {
-      bg: "bg-gray-50/80 backdrop-blur-sm",
-      text: "text-gray-700",
-      border: "border-gray-200",
-      icon: "draft",
-      gradient: "from-gray-400 to-gray-500",
-    },
-  };
+// ---------- Size Classes ----------
+const sizeClasses = {
+  small: "px-2 py-1 text-xs gap-1.5",
+  default: "px-3 py-1.5 text-sm gap-2",
+  large: "px-4 py-2 text-base gap-2.5",
+};
 
-  const sizeClasses = {
-    small: "px-2 py-1 text-xs gap-1.5",
-    default: "px-3 py-1.5 text-sm gap-2",
-    large: "px-4 py-2 text-base gap-2.5",
-  };
+// ---------- Main StatusBadge Component ----------
+const StatusBadge = ({ status = "", size = "default", showIcon = true }) => {
+  const s = (status || "").toLowerCase();
+  const config = statusConfig[s] || statusConfig.default;
+  const IconComponent = StatusIcons[config.icon] || StatusIcons.draft;
+
+  return (
+    <div
+      className={`inline-flex items-center ${sizeClasses[size]} rounded-full font-medium
+        ${config.bg} ${config.text} border ${config.border} transition-all duration-300
+        ease-out hover:scale-105 hover:shadow-sm group relative overflow-hidden`}
+    >
+      {/* Animated gradient overlay (hidden by default, appears on hover) */}
+      <div
+        className={`absolute inset-0 bg-gradient-to-r ${config.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
+      />
+
+      {showIcon && (
+        <div className="relative z-10 flex items-center">
+          <IconComponent className="w-3 h-3" />
+        </div>
+      )}
+
+      <span className="relative z-10 font-semibold tracking-wide first-letter:uppercase">
+        {s === "default" ? status : s}
+      </span>
+
+      {/* Pulsing dot for unpaid/overdue (extra visual cue) */}
+      {(s === "unpaid" || s === "overdue") && (
+        <div className="relative z-10">
+          <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---------- Optional: StatusBadge with Count ----------
+export const StatusWithCount = ({ status, count, size = "default" }) => {
+  return (
+    <div className="inline-flex items-center gap-2 group">
+      <StatusBadge status={status} size={size} />
+      {count !== undefined && (
+        <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full">
+          {count}
+        </span>
+      )}
+    </div>
+  );
+};
+
+export default StatusBadge;
