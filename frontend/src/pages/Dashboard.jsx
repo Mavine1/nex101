@@ -2,19 +2,22 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { dashboardStyles } from "../assets/dummyStyles";
-import KpiCard from '../components/KpiCard'; // Make sure KpiCard.jsx is fixed (icons mapped)
+import KpiCard from '../components/KpiCard'; // Ensure KpiCard.jsx is using Tailwind (as provided earlier)
 
 const API_BASE = "http://localhost:4000";
-const HARD_RATES = { USD_TO_INR: 83 };
+const HARD_RATES = { USD_TO_KES: 130 }; // Example rate: 1 USD = 130 KES
 
-function currencyFmt(amount = 0, currency = "INR") {
+// ---------- Currency formatter for Kenyan Shilling ----------
+function currencyFmt(amount = 0, currency = "KES") {
   try {
     const n = Number(amount || 0);
-    if (currency === "INR")
-      return new Intl.NumberFormat("en-IN", {
+    if (currency === "KES") {
+      return new Intl.NumberFormat("en-KE", {
         style: "currency",
-        currency: "INR",
+        currency: "KES",
+        minimumFractionDigits: 2,
       }).format(n);
+    }
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency,
@@ -39,12 +42,13 @@ function capitalize(s) {
   return String(s).charAt(0).toUpperCase() + String(s).slice(1);
 }
 
-function convertToINR(amount = 0, currency = "INR") {
+// Convert any amount to KES (Kenyan Shilling)
+function convertToKES(amount = 0, currency = "KES") {
   const n = Number(amount || 0);
-  const curr = String(currency || "INR").trim().toUpperCase();
-  if (curr === "INR") return n;
-  if (curr === "USD") return n * HARD_RATES.USD_TO_INR;
-  return n;
+  const curr = String(currency || "KES").trim().toUpperCase();
+  if (curr === "KES") return n;
+  if (curr === "USD") return n * HARD_RATES.USD_TO_KES;
+  return n; // fallback – assume already KES
 }
 
 // Icons (used for quick actions and table)
@@ -166,7 +170,7 @@ const Dashboard = () => {
       const mapped = (Array.isArray(raw) ? raw : []).map((inv) => {
         const clientObj = inv.client ?? {};
         const amountVal = Number(inv.total ?? inv.amount ?? 0);
-        const currency = (inv.currency || "INR").toUpperCase();
+        const currency = (inv.currency || "KES").toUpperCase();
 
         return {
           ...inv,
@@ -233,7 +237,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("storage", onStorage);
   }, [fetchInvoices]);
 
-  // ---------- KPIs calculation ----------
+  // ---------- KPIs calculation (all in KES) ----------
   const kpis = useMemo(() => {
     const totalInvoices = storedInvoices.length;
     let totalPaid = 0;
@@ -246,15 +250,15 @@ const Dashboard = () => {
         typeof inv.amount === "number"
           ? inv.amount
           : Number(inv.total ?? inv.amount ?? 0);
-      const invCurrency = inv.currency || "INR";
-      const amtInINR = convertToINR(rawAmount, invCurrency);
+      const invCurrency = inv.currency || "KES";
+      const amtInKES = convertToKES(rawAmount, invCurrency);
 
       if (inv.status === "Paid") {
-        totalPaid += amtInINR;
+        totalPaid += amtInKES;
         paidCount++;
       }
       if (inv.status === "Unpaid" || inv.status === "Overdue") {
-        totalUnpaid += amtInINR;
+        totalUnpaid += amtInKES;
         unpaidCount++;
       }
     });
@@ -340,15 +344,15 @@ const Dashboard = () => {
         />
         <KpiCard
           title="TOTAL PAID"
-          value={currencyFmt(kpis.totalPaid, "INR")}
-          hint="Received amount (INR)"
+          value={currencyFmt(kpis.totalPaid, "KES")}
+          hint="Received amount (KES)"
           iconType="revenue"
           trend={12.2}
         />
         <KpiCard
           title="TOTAL UNPAID"
-          value={currencyFmt(kpis.totalUnpaid, "INR")}
-          hint="Outstanding balance (INR)"
+          value={currencyFmt(kpis.totalUnpaid, "KES")}
+          hint="Outstanding balance (KES)"
           iconType="document"
           trend={3.1}
         />
@@ -376,7 +380,7 @@ const Dashboard = () => {
                   Avg. Invoice Value
                 </span>
                 <span className={dashboardStyles.quickStatsValue}>
-                  {currencyFmt(kpis.averageInvoiceValue, "INR")}
+                  {currencyFmt(kpis.averageInvoiceValue, "KES")}
                 </span>
               </div>
               <div className={dashboardStyles.quickStatsRow}>
@@ -537,7 +541,7 @@ const Dashboard = () => {
                       </td>
                       <td className={dashboardStyles.tableCell}>
                         <div className={dashboardStyles.amountCell}>
-                          {currencyFmt(inv.amount, inv.currency)}
+                          {currencyFmt(inv.amount, inv.currency || "KES")}
                         </div>
                       </td>
                       <td className={dashboardStyles.tableCell}>
