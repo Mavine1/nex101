@@ -8,6 +8,9 @@ import {
 import Home from "./pages/Home";
 import AppShell from "./components/AppShell";
 import Dashboard from "./pages/Dashboard";
+import CreateInvoice from "./pages/CreateInvoice";      
+import Invoices from "./pages/Invoices";                
+import BusinessProfile from "./pages/BusinessProfile";  
 
 // Protected route wrapper – renders children only when signed in,
 // otherwise redirects to Clerk's sign‑in page.
@@ -29,7 +32,7 @@ const App = () => {
         {/* Public route */}
         <Route path="/" element={<Home />} />
 
-        {/* Protected section */}
+        {/* Protected section under /app */}
         <Route
           path="/app"
           element={
@@ -38,10 +41,13 @@ const App = () => {
             </ClerkProtected>
           }
         >
-          {/* Index route – renders when path is exactly /app */}
           <Route index element={<Dashboard />} />
           {/* Explicit /app/dashboard route */}
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="create-invoice" element={<CreateInvoice />} />
+          <Route path="invoices" element={<Invoices />} />
+          <Route path="invoices/:id" element={<Invoices />} /> {/* optional: for single invoice view */}
+          <Route path="business" element={<BusinessProfile />} />
         </Route>
 
         {/* Optional: catch‑all 404 route */}
