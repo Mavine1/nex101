@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { dashboardStyles } from "../assets/dummyStyles";
-import KpiCard from '../components/KpiCard';
+import KpiCard from '../components/KpiCard'; // Make sure KpiCard.jsx is fixed (icons mapped)
 
 const API_BASE = "http://localhost:4000";
 const HARD_RATES = { USD_TO_INR: 83 };
+
 function currencyFmt(amount = 0, currency = "INR") {
   try {
     const n = Number(amount || 0);
@@ -45,6 +46,8 @@ function convertToINR(amount = 0, currency = "INR") {
   if (curr === "USD") return n * HARD_RATES.USD_TO_INR;
   return n;
 }
+
+// Icons (used for quick actions and table)
 const TrendingUpIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M23 6l-9.5 9.5-5-5L1 18" />
@@ -325,217 +328,245 @@ const Dashboard = () => {
   }
 
   return (
-    <div className={dashboardStyles.mainGrid}>
-      {/* Sidebar Column */}
-      <div className={dashboardStyles.sidebarColumn}>
-        {/* Quick Stats Card */}
-        <div className={dashboardStyles.quickStatsCard}>
-          <h3 className={dashboardStyles.quickStatsTitle}>Quick Stats</h3>
-          <div className="space-y-3">
-            <div className={dashboardStyles.quickStatsRow}>
-              <span className={dashboardStyles.quickStatsLabel}>Paid Rate</span>
-              <span className={dashboardStyles.quickStatsValue}>
-                {kpis.totalInvoices > 0
-                  ? ((kpis.paidCount / kpis.totalInvoices) * 100).toFixed(1)
-                  : 0}
-                %
-              </span>
-            </div>
-            <div className={dashboardStyles.quickStatsRow}>
-              <span className={dashboardStyles.quickStatsLabel}>
-                Avg. Invoice Value
-              </span>
-              <span className={dashboardStyles.quickStatsValue}>
-                {currencyFmt(kpis.averageInvoiceValue, "INR")}
-              </span>
-            </div>
-            <div className={dashboardStyles.quickStatsRow}>
-              <span className={dashboardStyles.quickStatsLabel}>
-                Collection Eff.
-              </span>
-              <span className={dashboardStyles.quickStatsValue}>
-                {kpis.paidPercentage.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions Card */}
-        <div className={dashboardStyles.cardContainer}>
-          <div className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className={dashboardStyles.quickActionsContainer}>
-              <button
-                onClick={() => navigate("/app/create-invoice")}
-                className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionBlue}`}
-              >
-                <div
-                  className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconBlue}`}
-                >
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M12 5v14m-7-7h14" />
-                  </svg>
-                </div>
-                <span className={dashboardStyles.quickActionText}>
-                  Create Invoice
-                </span>
-              </button>
-
-              <button
-                onClick={() => navigate("/app/invoices")}
-                className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
-              >
-                <div
-                  className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}
-                >
-                  <FileTextIcon className="w-4 h-4" />
-                </div>
-                <span className={dashboardStyles.quickActionText}>
-                  View All Invoices
-                </span>
-              </button>
-
-              <button
-                onClick={() => navigate("/app/business")}
-                className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
-              >
-                <div
-                  className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}
-                >
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                </div>
-                <span className={dashboardStyles.quickActionText}>
-                  Business Profile
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
+    <div className="p-6">
+      {/* KPI Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <KpiCard
+          title="TOTAL INVOICES"
+          value={kpis.totalInvoices}
+          hint="Active Invoice"
+          iconType="invoice"
+          trend={3.5}
+        />
+        <KpiCard
+          title="TOTAL PAID"
+          value={currencyFmt(kpis.totalPaid, "INR")}
+          hint="Received amount (INR)"
+          iconType="revenue"
+          trend={12.2}
+        />
+        <KpiCard
+          title="TOTAL UNPAID"
+          value={currencyFmt(kpis.totalUnpaid, "INR")}
+          hint="Outstanding balance (INR)"
+          iconType="document"
+          trend={3.1}
+        />
       </div>
 
-      {/* Content Column (Recent Invoices) */}
-      <div className={dashboardStyles.contentColumn}>
-        <div className={dashboardStyles.cardContainerOverflow}>
-          <div className={dashboardStyles.tableHeader}>
-            <div className={dashboardStyles.tableHeaderContent}>
-              <h3 className={dashboardStyles.tableTitle}>Recent Invoices</h3>
-              <p className="text-sm text-gray-500">
-                Latest 5 invoices from your account
-              </p>
+      {/* Original Two-Column Layout */}
+      <div className={dashboardStyles.mainGrid}>
+        {/* Sidebar Column */}
+        <div className={dashboardStyles.sidebarColumn}>
+          {/* Quick Stats Card */}
+          <div className={dashboardStyles.quickStatsCard}>
+            <h3 className={dashboardStyles.quickStatsTitle}>Quick Stats</h3>
+            <div className="space-y-3">
+              <div className={dashboardStyles.quickStatsRow}>
+                <span className={dashboardStyles.quickStatsLabel}>Paid Rate</span>
+                <span className={dashboardStyles.quickStatsValue}>
+                  {kpis.totalInvoices > 0
+                    ? ((kpis.paidCount / kpis.totalInvoices) * 100).toFixed(1)
+                    : 0}
+                  %
+                </span>
+              </div>
+              <div className={dashboardStyles.quickStatsRow}>
+                <span className={dashboardStyles.quickStatsLabel}>
+                  Avg. Invoice Value
+                </span>
+                <span className={dashboardStyles.quickStatsValue}>
+                  {currencyFmt(kpis.averageInvoiceValue, "INR")}
+                </span>
+              </div>
+              <div className={dashboardStyles.quickStatsRow}>
+                <span className={dashboardStyles.quickStatsLabel}>
+                  Collection Eff.
+                </span>
+                <span className={dashboardStyles.quickStatsValue}>
+                  {kpis.paidPercentage.toFixed(1)}%
+                </span>
+              </div>
             </div>
-            <button
-              onClick={() => navigate("/app/invoices")}
-              className={dashboardStyles.tableActionButton}
-            >
-              View All
-              <svg
-                className="w-4 h-4 ml-1"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M5 12h14m-7-7l7 7-7 7" />
-              </svg>
-            </button>
           </div>
 
-          {recent.length === 0 ? (
-            <div className={dashboardStyles.emptyState}>
-              <div className={dashboardStyles.emptyStateText}>
-                <FileTextIcon className={dashboardStyles.emptyStateIcon} />
-                <div className={dashboardStyles.emptyStateMessage}>
-                  No invoices yet
-                </div>
+          {/* Quick Actions Card */}
+          <div className={dashboardStyles.cardContainer}>
+            <div className="p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div className={dashboardStyles.quickActionsContainer}>
                 <button
                   onClick={() => navigate("/app/create-invoice")}
-                  className={dashboardStyles.emptyStateAction}
+                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionBlue}`}
                 >
-                  Create your first invoice
+                  <div
+                    className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconBlue}`}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M12 5v14m-7-7h14" />
+                    </svg>
+                  </div>
+                  <span className={dashboardStyles.quickActionText}>
+                    Create Invoice
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => navigate("/app/invoices")}
+                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
+                >
+                  <div
+                    className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}
+                  >
+                    <FileTextIcon className="w-4 h-4" />
+                  </div>
+                  <span className={dashboardStyles.quickActionText}>
+                    View All Invoices
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => navigate("/app/business")}
+                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
+                >
+                  <div
+                    className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <span className={dashboardStyles.quickActionText}>
+                    Business Profile
+                  </span>
                 </button>
               </div>
             </div>
-          ) : (
-            <table className={dashboardStyles.table}>
-              <thead>
-                <tr className={dashboardStyles.tableHead}>
-                  <th className={dashboardStyles.tableHeaderCell}>
-                    Client & ID
-                  </th>
-                  <th className={dashboardStyles.tableHeaderCell}>Amount</th>
-                  <th className={dashboardStyles.tableHeaderCell}>Status</th>
-                  <th className={dashboardStyles.tableHeaderCell}>Due Date</th>
-                  <th className={dashboardStyles.tableHeaderCell}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((inv) => (
-                  <tr
-                    key={inv.id}
-                    className={dashboardStyles.tableRow}
-                    onClick={() => openInvoice(inv)}
+          </div>
+        </div>
+
+        {/* Content Column (Recent Invoices) */}
+        <div className={dashboardStyles.contentColumn}>
+          <div className={dashboardStyles.cardContainerOverflow}>
+            <div className={dashboardStyles.tableHeader}>
+              <div className={dashboardStyles.tableHeaderContent}>
+                <h3 className={dashboardStyles.tableTitle}>Recent Invoices</h3>
+                <p className="text-sm text-gray-500">
+                  Latest 5 invoices from your account
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/app/invoices")}
+                className={dashboardStyles.tableActionButton}
+              >
+                View All
+                <svg
+                  className="w-4 h-4 ml-1"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M5 12h14m-7-7l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {recent.length === 0 ? (
+              <div className={dashboardStyles.emptyState}>
+                <div className={dashboardStyles.emptyStateText}>
+                  <FileTextIcon className={dashboardStyles.emptyStateIcon} />
+                  <div className={dashboardStyles.emptyStateMessage}>
+                    No invoices yet
+                  </div>
+                  <button
+                    onClick={() => navigate("/app/create-invoice")}
+                    className={dashboardStyles.emptyStateAction}
                   >
-                    <td className={dashboardStyles.tableCell}>
-                      <div className="flex items-center gap-3">
-                        <div className={dashboardStyles.clientAvatar}>
-                          {getClientInitial(inv)}
-                        </div>
-                        <div>
-                          <div className={dashboardStyles.clientInfo}>
-                            {getClientName(inv)}
-                          </div>
-                          <div className={dashboardStyles.clientSubInfo}>
-                            #{inv.id}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className={dashboardStyles.tableCell}>
-                      <div className={dashboardStyles.amountCell}>
-                        {currencyFmt(inv.amount, inv.currency)}
-                      </div>
-                    </td>
-                    <td className={dashboardStyles.tableCell}>
-                      <StatusBadge status={inv.status} showIcon />
-                    </td>
-                    <td className={dashboardStyles.tableCell}>
-                      <div className={dashboardStyles.dateCell}>
-                        {inv.dueDate ? formatDate(inv.dueDate) : "-"}
-                      </div>
-                    </td>
-                    <td className={dashboardStyles.tableCell}>
-                      <div className="text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openInvoice(inv);
-                          }}
-                          className={dashboardStyles.actionButton}
-                        >
-                          <EyeIcon className="w-4 h-4 group-hover/btn" />
-                        </button>
-                      </div>
-                    </td>
+                    Create your first invoice
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <table className={dashboardStyles.table}>
+                <thead>
+                  <tr className={dashboardStyles.tableHead}>
+                    <th className={dashboardStyles.tableHeaderCell}>
+                      Client & ID
+                    </th>
+                    <th className={dashboardStyles.tableHeaderCell}>Amount</th>
+                    <th className={dashboardStyles.tableHeaderCell}>Status</th>
+                    <th className={dashboardStyles.tableHeaderCell}>Due Date</th>
+                    <th className={dashboardStyles.tableHeaderCell}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {recent.map((inv) => (
+                    <tr
+                      key={inv.id}
+                      className={dashboardStyles.tableRow}
+                      onClick={() => openInvoice(inv)}
+                    >
+                      <td className={dashboardStyles.tableCell}>
+                        <div className="flex items-center gap-3">
+                          <div className={dashboardStyles.clientAvatar}>
+                            {getClientInitial(inv)}
+                          </div>
+                          <div>
+                            <div className={dashboardStyles.clientInfo}>
+                              {getClientName(inv)}
+                            </div>
+                            <div className={dashboardStyles.clientSubInfo}>
+                              #{inv.id}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={dashboardStyles.tableCell}>
+                        <div className={dashboardStyles.amountCell}>
+                          {currencyFmt(inv.amount, inv.currency)}
+                        </div>
+                      </td>
+                      <td className={dashboardStyles.tableCell}>
+                        <StatusBadge status={inv.status} showIcon />
+                      </td>
+                      <td className={dashboardStyles.tableCell}>
+                        <div className={dashboardStyles.dateCell}>
+                          {inv.dueDate ? formatDate(inv.dueDate) : "-"}
+                        </div>
+                      </td>
+                      <td className={dashboardStyles.tableCell}>
+                        <div className="text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInvoice(inv);
+                            }}
+                            className={dashboardStyles.actionButton}
+                          >
+                            <EyeIcon className="w-4 h-4 group-hover/btn" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
     </div>
