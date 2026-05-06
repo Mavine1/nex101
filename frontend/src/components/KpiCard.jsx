@@ -1,7 +1,6 @@
 import React from 'react';
-import { kpiCardStyles } from '../assets/dummyStyles';
 
-// Icons (you can copy these from your Dashboard or define here)
+// ======================== ICONS ========================
 const RevenueIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <line x1="12" y1="1" x2="12" y2="23" />
@@ -31,51 +30,56 @@ const MetricIcons = {
   default: InvoiceIcon,
 };
 
+// ======================== KPI CARD COMPONENT ========================
 const KpiCard = ({ title, value, hint, iconType = "default", trend, className = "" }) => {
   const IconComponent = MetricIcons[iconType] || MetricIcons.default;
 
   const getTrendColor = (trendValue) => {
-    if (trendValue > 0) return kpiCardStyles.trendBadgePositive;
-    if (trendValue < 0) return kpiCardStyles.trendBadgeNegative;
-    return kpiCardStyles.trendBadgeNeutral;
+    if (trendValue > 0) return "text-green-600 bg-green-50";
+    if (trendValue < 0) return "text-red-600 bg-red-50";
+    return "text-gray-500 bg-gray-50";
+  };
+
+  const getTrendIcon = (trendValue) => {
+    if (trendValue > 0) return "▲";
+    if (trendValue < 0) return "▼";
+    return "•";
   };
 
   return (
-    <div className={`${kpiCardStyles.cardContainer} ${className}`}>
-      <div className={kpiCardStyles.animatedBackground}></div>
-      <div className={kpiCardStyles.content}>
-        <div className={kpiCardStyles.headerContainer}>
-          <div className={kpiCardStyles.mainContent}>
-            <div className={kpiCardStyles.iconTrendContainer}>
-              <div className={kpiCardStyles.iconContainer}>
-                <IconComponent />
-              </div>
-              {trend !== undefined && (
-                <div className={getTrendColor(trend)}>
-                  <svg viewBox="0 0 24 24" width="16" height="16">
-                    <path d="M23 6l-9.5 9.5-5-5L1 18" />
-                    <path d="M17 6h6v6" />
-                  </svg>
-                  {Math.abs(trend)}%
-                </div>
-              )}
-            </div>
-            <div className={kpiCardStyles.textContent}>
-              <div className={kpiCardStyles.title}>{title}</div>
-              <div className={kpiCardStyles.value}>{value}</div>
-            </div>
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all hover:shadow-md ${className}`}>
+      {/* Header with icon and trend */}
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            {title}
           </div>
+          <div className="text-2xl font-bold text-gray-900">
+            {value}
+          </div>
+          {hint && (
+            <div className="flex items-center gap-1 mt-2 text-xs text-gray-400">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              {hint}
+            </div>
+          )}
         </div>
-        <div className={kpiCardStyles.hintContainer}>
-          <svg strokeWidth="2" width="14" height="14" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-          {hint}
+        <div className="p-2 bg-gray-50 rounded-full">
+          <IconComponent className="w-5 h-5 text-gray-600" />
         </div>
       </div>
-      <div className={kpiCardStyles.cornerAccent}></div>
+
+      {/* Trend badge */}
+      {trend !== undefined && (
+        <div className={`mt-4 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(trend)}`}>
+          <span>{getTrendIcon(trend)}</span>
+          <span>{Math.abs(trend)}%</span>
+        </div>
+      )}
     </div>
   );
 };
