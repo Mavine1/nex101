@@ -8,9 +8,9 @@ import {
 import Home from "./pages/Home";
 import AppShell from "./components/AppShell";
 import Dashboard from "./pages/Dashboard";
-import CreateInvoice from "./pages/CreateInvoice";      
-import Invoices from "./pages/Invoices";                
-import BusinessProfile from "./pages/BusinessProfile";  
+import Invoices from "./pages/Invoices";
+import CreateInvoice from "./pages/CreateInvoice";
+import InvoicePreview from "../components/InvoicePreview";
 
 // Protected route wrapper – renders children only when signed in,
 // otherwise redirects to Clerk's sign‑in page.
@@ -41,16 +41,26 @@ const App = () => {
             </ClerkProtected>
           }
         >
+          {/* Index route – /app */}
           <Route index element={<Dashboard />} />
-          {/* Explicit /app/dashboard route */}
+          {/* /app/dashboard */}
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="create-invoice" element={<CreateInvoice />} />
+
+          {/* Invoice routes */}
           <Route path="invoices" element={<Invoices />} />
-          <Route path="invoices/:id" element={<Invoices />} />
+          <Route path="invoices/new" element={<CreateInvoice />} />
+          <Route path="invoices/:id" element={<InvoicePreview />} />
+          <Route path="invoices/:id/preview" element={<InvoicePreview />} />
+          <Route path="invoices/:id/edit" element={<CreateInvoice />} />
+
+          {/* Legacy / create-invoice (kept for backward compatibility) */}
+          <Route path="create-invoice" element={<CreateInvoice />} />
+
+          {/* Business profile route (from earlier Dashboard buttons) */}
           <Route path="business" element={<BusinessProfile />} />
         </Route>
 
-        {/* Optional: catch‑all 404 route */}
+        {/* Optional: 404 Not Found */}
         {/* <Route path="*" element={<NotFound />} /> */}
       </Routes>
     </div>
