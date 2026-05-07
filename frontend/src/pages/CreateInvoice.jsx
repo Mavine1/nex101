@@ -3,11 +3,12 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import Swal from "sweetalert2";
 import StatusBadge from "../components/StatusBadge";
+import GeminiIcon from "../components/GeminiIcon"; // <-- import GeminiIcon
 import {
   createInvoiceStyles,
   createInvoiceIconColors,
-  createInvoiceCustomStyles,
 } from "../assets/dummyStyles";
+import { invoicesStyles } from "../assets/dummyStyles"; // <-- for AI button style
 
 // Injected inline CSS for the AI modal (tiny)
 const injectAIModalStyles = () => {
@@ -43,13 +44,11 @@ function resolveImageUrl(url) {
   if (/^https?:\/\//i.test(s)) {
     try {
       const parsed = new URL(s);
-      // Keep absolute URLs as is (they include the correct origin)
       return parsed.href;
     } catch {
       // fall through
     }
   }
-  // relative path – keep as is (will be resolved by browser)
   return s.startsWith("/") ? s : `/${s}`;
 }
 
@@ -120,11 +119,6 @@ const SaveIcon = ({ className = "w-4 h-4" }) => (
     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
     <polyline points="17 21 17 13 7 13 7 21" />
     <polyline points="7 3 7 8 15 8" />
-  </svg>
-);
-const SparklesIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
   </svg>
 );
 const DeleteIcon = ({ className = "w-4 h-4" }) => (
@@ -517,7 +511,7 @@ export default function CreateInvoice() {
 
   return (
     <div className={createInvoiceStyles.pageContainer}>
-      {/* Header with AI button (using same style as Invoices page) */}
+      {/* Header with AI button (same style as Invoices page) */}
       <div className={createInvoiceStyles.headerContainer}>
         <div>
           <h1 className={createInvoiceStyles.headerTitle}>{isEditing ? "Edit Invoice" : "Create New Invoice"}</h1>
@@ -525,10 +519,12 @@ export default function CreateInvoice() {
         </div>
         <div className={createInvoiceStyles.headerButtonContainer}>
           <button
+            type="button"
             onClick={() => setAiModalOpen(true)}
-            className={createInvoiceStyles.aiButton}
+            className={invoicesStyles.aiButton}   // <-- using invoicesStyles for consistency
           >
-            <SparklesIcon className="w-4 h-4" /> Create with AI
+            <GeminiIcon className="w-6 h-6 group-hover:scale-110 transition-transform flex-none" />
+            Create with AI
           </button>
           <button onClick={handlePreview} className={createInvoiceStyles.previewButton}>
             <PreviewIcon className="w-4 h-4" /> Preview
@@ -604,7 +600,7 @@ export default function CreateInvoice() {
         </div>
       </div>
 
-      {/* Single Column – Items table only (no right column summary) */}
+      {/* Single Column – Bill To + Items (full width, no right column summary) */}
       <div className={createInvoiceStyles.mainGrid}>
         <div className={createInvoiceStyles.leftColumn}>
           {/* Bill To */}
