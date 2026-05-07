@@ -21,17 +21,16 @@ const itemSchema = new mongoose.Schema({
     }
 });
 
-// the invoice schema
 const invoiceSchema = new mongoose.Schema({
     owner: {
         type: String,
         required: true,
         index: true
-    }, // it is clerk id
-    // it must be unique for each invoice
+    },
     invoiceNumber: {
         type: String,
         required: true,
+        unique: true,           // prevent duplicate numbers
         index: true
     },
     issueDate: {
@@ -42,15 +41,14 @@ const invoiceSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    items: [itemSchema],
 
-    items: [itemSchema],  // ✅ Fixed: changed from ItemSchema to itemSchema
-
-    // Business info
+    // Seller / Business info (aligned with business profile)
     fromBusinessName: { type: String, default: "" },
     fromEmail: { type: String, default: "" },
     fromAddress: { type: String, default: "" },
     fromPhone: { type: String, default: "" },
-    fromGst: { type: String, default: "" },
+    fromLocation: { type: String, default: "" },     // replaces fromGst
 
     // Client info
     client: {
@@ -60,11 +58,11 @@ const invoiceSchema = new mongoose.Schema({
         phone: { type: String, default: "" }
     },
 
-    currency: { type: String, default: "KSH" },  // ✅ Now has proper comma before it
-    status: { 
-        type: String, 
-        enum: ["draft", "unpaid", "paid", "overdue"], 
-        default: "draft" 
+    currency: { type: String, default: "KSH" },
+    status: {
+        type: String,
+        enum: ["draft", "unpaid", "paid", "overdue"],
+        default: "draft"
     },
 
     logoDataUrl: { type: String, default: null },
