@@ -3,7 +3,12 @@ import Invoice from "../models/invoiceModel.js";
 import { getAuth } from "@clerk/express";
 import path from "path";
 
-const API_BASE = "http://localhost:4000";
+// Helper to get base URL from request (dynamic port)
+function getBaseUrl(req) {
+    const protocol = req.protocol; // 'http' or 'https'
+    const host = req.get('host');   // includes hostname and port (e.g., 'localhost:3000')
+    return `${protocol}://${host}`;
+}
 
 function computeTotals(items = [], taxPercent = 0) {
     const safe = Array.isArray(items) ? items.filter(Boolean) : [];
@@ -35,10 +40,13 @@ function isObjectIdString(val) {
     return typeof val === "string" && /^[0-9a-fA-F]{24}$/.test(val);
 }
 
-// For helper
+// Helper for uploaded files – uses dynamic base URL
 function uploadedFilesToUrls(req) {
     const urls = {};
     if (!req.files) return urls;
+
+    const baseUrl = getBaseUrl(req);
+
     const mapping = {
         logoName: "logoDataUrl",
         stampName: "stampDataUrl",
@@ -52,7 +60,7 @@ function uploadedFilesToUrls(req) {
         if (Array.isArray(arr) && arr[0]) {
             const filename =
                 arr[0].filename || (arr[0].path && path.basename(arr[0].path));
-            if (filename) urls[mapping[field]] = `${API_BASE}/uploads/${filename}`;
+            if (filename) urls[mapping[field]] = `${baseUrl}/uploads/${filename}`;
         }
     });
     return urls;
