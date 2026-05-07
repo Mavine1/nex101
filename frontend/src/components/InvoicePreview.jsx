@@ -104,6 +104,7 @@ function normalizeClient(raw) {
       email: raw.email ?? "",
       address: raw.address ?? "",
       phone: raw.phone ?? "",
+      company: raw.company ?? "",
     };
   }
   return { name: "", email: "", address: "", phone: "" };
@@ -125,6 +126,36 @@ const EditIcon = ({ className = "w-4 h-4" }) => (
 const ArrowLeftIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M19 12H5M12 19l-7-7 7-7" />
+  </svg>
+);
+
+// Phone icon for footer
+const PhoneCircleIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M8.5 3.5s-1 2-1 4c0 5.5 4.5 10 10 10 2 0 4-1 4-1" />
+    <path d="M8.91 10.45a10.18 10.18 0 0 0 4.64 4.64l1.55-1.55a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C9.61 21 3 14.39 3 6.27a1 1 0 0 1 1-1H7.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02z" />
+  </svg>
+);
+const EmailCircleIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M4 8l8 5 8-5" />
+    <rect x="4" y="8" width="16" height="10" rx="1" />
+  </svg>
+);
+const WebCircleIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10A15.3 15.3 0 0 1 8 12a15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+const LocationCircleIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" />
+    <path d="M12 17s-5-4.686-5-8a5 5 0 0 1 10 0c0 3.314-5 8-5 8z" />
   </svg>
 );
 
@@ -156,7 +187,6 @@ export default function InvoicePreview() {
     }
   }, [getToken]);
 
-  // fetch invoice
   useEffect(() => {
     let mounted = true;
     async function fetchInvoice() {
@@ -167,7 +197,6 @@ export default function InvoicePreview() {
         const token = await obtainToken();
         const headers = { Accept: "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
-
         const res = await fetch(`/api/invoice/${id}`, { method: "GET", headers });
         if (res.ok) {
           const json = await res.json().catch(() => null);
@@ -186,8 +215,6 @@ export default function InvoicePreview() {
             setInvoice(normalized);
             return;
           }
-        } else {
-          console.warn("Failed to fetch invoice from server:", res.status);
         }
       } catch (err) {
         console.warn("Error fetching invoice:", err);
@@ -204,7 +231,6 @@ export default function InvoicePreview() {
     return () => { mounted = false; };
   }, [id, invoiceFromState, obtainToken]);
 
-  // fetch business profile (and update when changed)
   useEffect(() => {
     let mounted = true;
     async function fetchProfile() {
@@ -213,13 +239,8 @@ export default function InvoicePreview() {
         const token = await obtainToken();
         const headers = { Accept: "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
-
         const res = await fetch("/api/businessProfile/me", { method: "GET", headers });
-        if (!res.ok) {
-          console.warn("Profile fetch returned non-ok:", res.status);
-          setProfileLoading(false);
-          return;
-        }
+        if (!res.ok) { setProfileLoading(false); return; }
         const json = await res.json().catch(() => null);
         const data = json?.data ?? json ?? null;
         if (mounted && data && typeof data === "object") {
@@ -252,7 +273,6 @@ export default function InvoicePreview() {
         if (mounted) setProfileLoading(false);
       }
     }
-
     const stored = readJSON("business_profile", null);
     if (!stored) fetchProfile();
     return () => { mounted = false; };
@@ -323,15 +343,350 @@ export default function InvoicePreview() {
   const sellerEmail = invoice.fromEmail || profile.email || "";
   const sellerPhone = invoice.fromPhone || profile.phone || "";
   const sellerLocation = invoice.fromLocation || profile.location || "";
+  const sellerWebsite = profile.website || "";
 
-  // payment details from profile
   const paybill = profile.paybill || "247247";
   const accountNumber = profile.accountNumber || "0799501465";
   const accountName = profile.accountName || "NEX101";
-
-  // terms and footer
   const terms = invoice.terms || profile.terms || "";
   const footerText = invoice.footer || profile.footer || "";
+
+  // Colors
+  const DARK = "#3b0030";
+  const PINK = "#c0005a";
+  const LIGHT_PINK = "#f5e6ee";
+
+  // Inline styles object for the invoice
+  const s = {
+    page: {
+      fontFamily: "'Segoe UI', Arial, sans-serif",
+      maxWidth: "860px",
+      margin: "0 auto",
+      background: "white",
+      boxShadow: "0 2px 24px rgba(0,0,0,0.10)",
+      overflow: "hidden",
+    },
+    // Top header bar: logo left, dark INVOICE banner right
+    topBar: {
+      display: "flex",
+      alignItems: "stretch",
+      minHeight: "90px",
+    },
+    topBarLeft: {
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      padding: "18px 28px",
+      background: "white",
+    },
+    topBarRight: {
+      background: DARK,
+      minWidth: "220px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "18px 36px",
+      position: "relative",
+      clipPath: "polygon(18px 0%, 100% 0%, 100% 100%, 0% 100%)",
+    },
+    invoiceTitle: {
+      color: "white",
+      fontSize: "2.4rem",
+      fontWeight: "900",
+      letterSpacing: "0.12em",
+      textTransform: "uppercase",
+      lineHeight: 1,
+    },
+    // Thin pink line under header
+    pinkDivider: {
+      height: "3px",
+      background: PINK,
+      width: "100%",
+    },
+    // Body padding
+    body: {
+      padding: "24px 32px 0 32px",
+    },
+    // Client & invoice info row
+    infoRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: "22px",
+      gap: "16px",
+    },
+    clientBlock: {
+      flex: 1,
+    },
+    invoiceTo: {
+      fontSize: "0.85rem",
+      color: "#555",
+      marginBottom: "2px",
+    },
+    clientName: {
+      color: PINK,
+      fontWeight: "700",
+      fontSize: "1.05rem",
+      textTransform: "uppercase",
+      letterSpacing: "0.02em",
+    },
+    clientCompany: {
+      color: "#222",
+      fontSize: "0.92rem",
+    },
+    clientPhone: {
+      color: "#444",
+      fontSize: "0.88rem",
+    },
+    invoiceMetaBlock: {
+      textAlign: "right",
+      minWidth: "200px",
+    },
+    invoiceNoBadge: {
+      background: DARK,
+      color: "white",
+      fontWeight: "700",
+      fontSize: "0.95rem",
+      padding: "7px 18px",
+      display: "inline-block",
+      marginBottom: "6px",
+      letterSpacing: "0.04em",
+    },
+    invoiceDateRow: {
+      fontSize: "0.9rem",
+      color: "#222",
+    },
+    invoiceDateVal: {
+      color: PINK,
+      fontWeight: "700",
+    },
+    // Items table
+    table: {
+      width: "100%",
+      borderCollapse: "collapse",
+      marginBottom: "0",
+    },
+    thead: {
+      background: DARK,
+    },
+    th: {
+      color: "white",
+      fontWeight: "700",
+      fontSize: "0.78rem",
+      padding: "10px 12px",
+      textAlign: "left",
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+    },
+    thRight: {
+      color: "white",
+      fontWeight: "700",
+      fontSize: "0.78rem",
+      padding: "10px 12px",
+      textAlign: "right",
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+    },
+    tdEven: {
+      padding: "9px 12px",
+      fontSize: "0.88rem",
+      color: "#222",
+      background: "white",
+      borderBottom: "1px solid #eee",
+    },
+    tdOdd: {
+      padding: "9px 12px",
+      fontSize: "0.88rem",
+      color: "#222",
+      background: LIGHT_PINK,
+      borderBottom: "1px solid #eee",
+    },
+    tdRight: {
+      textAlign: "right",
+    },
+    tdBold: {
+      fontWeight: "600",
+    },
+    // Last row shaded
+    lastRow: {
+      background: LIGHT_PINK,
+    },
+    tableSection: {
+      overflowX: "auto",
+      marginBottom: "0",
+    },
+    // Payment + totals row
+    bottomSection: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      padding: "20px 32px",
+      gap: "24px",
+    },
+    paymentBlock: {
+      flex: 1,
+    },
+    paymentBadge: {
+      background: PINK,
+      color: "white",
+      fontWeight: "700",
+      fontSize: "0.82rem",
+      padding: "5px 14px",
+      display: "inline-block",
+      marginBottom: "10px",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+    },
+    paymentRow: {
+      display: "flex",
+      gap: "8px",
+      fontSize: "0.88rem",
+      color: "#222",
+      marginBottom: "2px",
+    },
+    paymentLabel: {
+      color: "#555",
+      minWidth: "90px",
+      fontWeight: "500",
+    },
+    paymentVal: {
+      fontWeight: "700",
+      color: "#111",
+    },
+    totalsBlock: {
+      minWidth: "220px",
+      textAlign: "right",
+    },
+    totalsRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "24px",
+      fontSize: "0.9rem",
+      color: "#444",
+      marginBottom: "4px",
+      paddingBottom: "4px",
+    },
+    totalsRowBold: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: "24px",
+      background: PINK,
+      color: "white",
+      padding: "7px 12px",
+      fontWeight: "700",
+      fontSize: "1rem",
+      marginTop: "4px",
+    },
+    totalsLabel: {
+      fontWeight: "500",
+      letterSpacing: "0.04em",
+    },
+    totalsVal: {
+      fontWeight: "700",
+    },
+    // Terms
+    termsSection: {
+      padding: "0 32px 16px 32px",
+    },
+    termsTitle: {
+      color: DARK,
+      fontWeight: "800",
+      fontSize: "0.9rem",
+      textTransform: "uppercase",
+      letterSpacing: "0.06em",
+      marginBottom: "4px",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+    },
+    termsDivider: {
+      flex: 1,
+      height: "1px",
+      background: "#ccc",
+      display: "inline-block",
+    },
+    termsText: {
+      fontSize: "0.82rem",
+      color: "#444",
+      lineHeight: 1.6,
+    },
+    // Thank you & signature row
+    thankYouRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-end",
+      padding: "8px 32px 16px 32px",
+    },
+    thankYou: {
+      color: PINK,
+      fontWeight: "700",
+      fontSize: "0.95rem",
+      fontStyle: "italic",
+    },
+    signatureBlock: {
+      textAlign: "center",
+      minWidth: "160px",
+    },
+    signatureLine: {
+      borderTop: "1.5px solid #333",
+      paddingTop: "6px",
+      marginTop: "4px",
+    },
+    signatureNameText: {
+      fontWeight: "700",
+      fontSize: "0.88rem",
+      color: "#111",
+      textTransform: "uppercase",
+      letterSpacing: "0.03em",
+    },
+    signatureTitleText: {
+      fontSize: "0.78rem",
+      color: "#555",
+    },
+    // Footer bar
+    footerDivider: {
+      height: "2px",
+      background: PINK,
+      margin: "0 32px",
+    },
+    footer: {
+      padding: "14px 32px 10px 32px",
+    },
+    footerRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      fontSize: "0.82rem",
+      color: "#333",
+      marginBottom: "5px",
+      flexWrap: "wrap",
+    },
+    footerItem: {
+      display: "flex",
+      alignItems: "center",
+      gap: "7px",
+      marginRight: "20px",
+    },
+    // Dark corner accent bottom-right
+    cornerAccent: {
+      display: "flex",
+      justifyContent: "flex-end",
+    },
+    cornerTriangle: {
+      width: "80px",
+      height: "22px",
+      background: DARK,
+      clipPath: "polygon(100% 0%, 100% 100%, 0% 100%)",
+    },
+  };
+
+  // Pad items to at least 7 rows for the table to look like the design
+  const MIN_ROWS = 7;
+  const paddedItems = [...items];
+  while (paddedItems.length < MIN_ROWS) {
+    paddedItems.push(null); // empty row
+  }
 
   return (
     <div className={invoicePreviewStyles.pageContainer}>
@@ -354,127 +709,203 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Printable invoice area - design matches the image */}
-        <div id="print-area" className={invoicePreviewStyles.printArea} style={{ fontFamily: "sans-serif", maxWidth: "1000px", margin: "0 auto", background: "white", padding: "2rem", boxShadow: "0 0 10px rgba(0,0,0,0.05)" }}>
-          {/* Header with logo and company details */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "2px solid #eee", paddingBottom: "1rem" }}>
-            <div>
-              {logo && <img src={logo} alt="Company Logo" style={{ maxHeight: "70px", maxWidth: "200px", objectFit: "contain" }} />}
+        {/* ===================== PRINTABLE INVOICE ===================== */}
+        <div id="print-area" style={s.page}>
+
+          {/* TOP HEADER: Logo + INVOICE banner */}
+          <div style={s.topBar}>
+            <div style={s.topBarLeft}>
+              {logo
+                ? <img src={logo} alt="Logo" style={{ maxHeight: "64px", maxWidth: "180px", objectFit: "contain" }} />
+                : (
+                  <div style={{ fontWeight: "900", fontSize: "1.4rem", color: DARK, letterSpacing: "0.04em" }}>
+                    {invoice.fromBusinessName || profile.businessName || "YOUR COMPANY"}
+                  </div>
+                )
+              }
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div><strong>INVOICE</strong></div>
-              <div>#{invoice.invoiceNumber || invoice.id}</div>
+            <div style={s.topBarRight}>
+              <span style={s.invoiceTitle}>INVOICE</span>
             </div>
           </div>
 
-          {/* Seller & Client Row */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2rem" }}>
-            <div>
-              <div><strong>{invoice.fromBusinessName || profile.businessName || "Company Name"}</strong></div>
-              <div>{sellerAddress}</div>
-              <div>{sellerLocation}</div>
-              <div>Email: {sellerEmail}</div>
-              <div>Phone: {sellerPhone}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div><strong>Invoice to:</strong></div>
-              <div>{client.name || "CLIENT'S NAME"}</div>
-              <div>{client.company || ""}</div>
-              <div>Tel: {client.phone || "071234567890"}</div>
-            </div>
-          </div>
+          {/* Pink divider line */}
+          <div style={s.pinkDivider} />
 
-          {/* Invoice details row (number, date, due date) */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem", background: "#f9f9f9", padding: "0.75rem", borderRadius: "6px" }}>
-            <div><strong>INVOICE NO.:</strong> {invoice.invoiceNumber || invoice.id}</div>
-            <div><strong>Invoice Date:</strong> {invoice.issueDate ? formatDate(invoice.issueDate) : "—"}</div>
-            <div><strong>Due Date:</strong> {invoice.dueDate ? formatDate(invoice.dueDate) : "—"}</div>
-          </div>
-
-          {/* Items Table with stripes */}
-          <div style={{ overflowX: "auto", marginBottom: "1.5rem" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f0f0f0", borderBottom: "2px solid #ddd" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left" }}>NO</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left" }}>PRODUCT/SERVICE DESCRIPTION</th>
-                  <th style={{ padding: "0.75rem", textAlign: "right" }}>QTY</th>
-                  <th style={{ padding: "0.75rem", textAlign: "right" }}>UNIT PRICE ({invoiceCurrency})</th>
-                  <th style={{ padding: "0.75rem", textAlign: "right" }}>TOTAL PRICE ({invoiceCurrency})</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length ? (
-                  items.map((it, idx) => (
-                    <tr key={it.id || idx} style={{ borderBottom: "1px solid #eee", background: idx % 2 === 0 ? "white" : "#fafafa" }}>
-                      <td style={{ padding: "0.75rem" }}>{idx + 1}</td>
-                      <td style={{ padding: "0.75rem" }}>{it.description || "—"}</td>
-                      <td style={{ padding: "0.75rem", textAlign: "right" }}>{it.qty || 0}</td>
-                      <td style={{ padding: "0.75rem", textAlign: "right" }}>{currencyFmt(it.unitPrice || 0, invoiceCurrency)}</td>
-                      <td style={{ padding: "0.75rem", textAlign: "right", fontWeight: "500" }}>{currencyFmt(Number(it.qty || 0) * Number(it.unitPrice || 0), invoiceCurrency)}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" style={{ padding: "1rem", textAlign: "center", color: "#6b7280" }}>No items in this invoice</td>
-                  </tr>
+          {/* BODY */}
+          <div style={s.body}>
+            {/* Client info + Invoice number/date */}
+            <div style={s.infoRow}>
+              <div style={s.clientBlock}>
+                <div style={s.invoiceTo}>Invoice to:</div>
+                <div style={s.clientName}>{client.name || "CLIENT'S NAME"}</div>
+                {client.company && <div style={s.clientCompany}>{client.company}</div>}
+                <div style={s.clientPhone}>Tel: {client.phone || "071234567890"}</div>
+              </div>
+              <div style={s.invoiceMetaBlock}>
+                <div style={s.invoiceNoBadge}>
+                  INVOICE NO.: {invoice.invoiceNumber || invoice.id || "00001"}
+                </div>
+                {invoice.issueDate && (
+                  <div style={s.invoiceDateRow}>
+                    Invoice Date: <span style={s.invoiceDateVal}>{formatDate(invoice.issueDate)}</span>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Totals and Payment Method section */}
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "1.5rem", marginBottom: "1.5rem" }}>
-            <div style={{ flex: 1 }}>
-              <div><strong>PAYMENT METHOD</strong></div>
-              <div>PAYBILL: {paybill}</div>
-              <div>ACC. NO.: {accountNumber}</div>
-              <div>ACC. NAME: {accountName}</div>
-            </div>
-            <div style={{ flex: 1, textAlign: "right" }}>
-              <div><strong>Subtotal</strong> {currencyFmt(subtotal, invoiceCurrency)}</div>
-              <div><strong>Tax ({taxPercent}%)</strong> {currencyFmt(tax, invoiceCurrency)}</div>
-              <div style={{ fontSize: "1.25rem", fontWeight: "bold", marginTop: "0.5rem", borderTop: "2px solid #ddd", paddingTop: "0.5rem" }}>
-                <strong>Total</strong> {currencyFmt(total, invoiceCurrency)}
+                {invoice.dueDate && (
+                  <div style={{ ...s.invoiceDateRow, marginTop: "3px" }}>
+                    Due Date: <span style={s.invoiceDateVal}>{formatDate(invoice.dueDate)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Terms & Conditions */}
+          {/* ITEMS TABLE */}
+          <div style={s.tableSection}>
+            <table style={s.table}>
+              <thead style={s.thead}>
+                <tr>
+                  <th style={{ ...s.th, width: "46px" }}>NO</th>
+                  <th style={s.th}>PRODUCT/SERVICE DESCRIPTION</th>
+                  <th style={{ ...s.thRight, width: "70px" }}>QTY</th>
+                  <th style={{ ...s.thRight, width: "130px" }}>UNIT PRICE ({invoiceCurrency})</th>
+                  <th style={{ ...s.thRight, width: "130px" }}>TOTAL PRICE ({invoiceCurrency})</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paddedItems.map((it, idx) => {
+                  const isLast = idx === paddedItems.length - 1;
+                  const tdStyle = (isLast || idx % 2 !== 0) ? s.tdOdd : s.tdEven;
+                  if (!it) {
+                    return (
+                      <tr key={`empty-${idx}`}>
+                        <td style={{ ...tdStyle, height: "34px" }}>&nbsp;</td>
+                        <td style={tdStyle}>&nbsp;</td>
+                        <td style={tdStyle}>&nbsp;</td>
+                        <td style={tdStyle}>&nbsp;</td>
+                        <td style={tdStyle}>&nbsp;</td>
+                      </tr>
+                    );
+                  }
+                  return (
+                    <tr key={it.id || idx}>
+                      <td style={tdStyle}>{idx + 1}</td>
+                      <td style={tdStyle}>{it.description || "—"}</td>
+                      <td style={{ ...tdStyle, ...s.tdRight }}>{it.qty || 0}</td>
+                      <td style={{ ...tdStyle, ...s.tdRight }}>{currencyFmt(it.unitPrice || 0, invoiceCurrency)}</td>
+                      <td style={{ ...tdStyle, ...s.tdRight, ...s.tdBold }}>{currencyFmt(Number(it.qty || 0) * Number(it.unitPrice || 0), invoiceCurrency)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* PAYMENT + TOTALS */}
+          <div style={s.bottomSection}>
+            <div style={s.paymentBlock}>
+              <div style={s.paymentBadge}>PAYMENT METHOD</div>
+              <div style={s.paymentRow}>
+                <span style={s.paymentLabel}>PAYBILL:</span>
+                <span style={s.paymentVal}>{paybill}</span>
+              </div>
+              <div style={s.paymentRow}>
+                <span style={s.paymentLabel}>ACC. NO.:</span>
+                <span style={s.paymentVal}>{accountNumber}</span>
+              </div>
+              <div style={s.paymentRow}>
+                <span style={s.paymentLabel}>ACC. NAME:</span>
+                <span style={s.paymentVal}>{accountName}</span>
+              </div>
+            </div>
+
+            <div style={s.totalsBlock}>
+              <div style={s.totalsRow}>
+                <span style={s.totalsLabel}>SUB TOTAL</span>
+                <span style={s.totalsVal}>{currencyFmt(subtotal, invoiceCurrency)}</span>
+              </div>
+              <div style={s.totalsRow}>
+                <span style={s.totalsLabel}>TAX ({taxPercent}%)</span>
+                <span style={s.totalsVal}>{currencyFmt(tax, invoiceCurrency)}</span>
+              </div>
+              <div style={s.totalsRowBold}>
+                <span>GRAND TOTAL</span>
+                <span>{currencyFmt(total, invoiceCurrency)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* TERMS & CONDITIONS */}
           {terms && (
-            <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "#f9f9f9", borderRadius: "6px" }}>
-              <strong>TERMS & CONDITIONS</strong>
-              <div style={{ marginTop: "0.25rem", whiteSpace: "pre-wrap" }}>{terms}</div>
+            <div style={s.termsSection}>
+              <div style={s.termsTitle}>
+                TERMS &amp; CONDITIONS
+                <span style={s.termsDivider} />
+              </div>
+              <div style={s.termsText}>{terms}</div>
             </div>
           )}
 
-          {/* Signature and Stamp (only if they exist, placed side by side at the bottom) */}
-          {(signature || stamp) && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "2rem", marginTop: "1rem", marginBottom: "1rem", borderTop: "1px solid #eee", paddingTop: "1rem" }}>
+          {/* THANK YOU + SIGNATURE */}
+          <div style={s.thankYouRow}>
+            <div style={s.thankYou}>{footerText || "Thank you for your business!"}</div>
+            <div style={s.signatureBlock}>
               {signature && (
-                <div style={{ textAlign: "center" }}>
-                  <div><strong>Authorized Signature</strong></div>
-                  <img src={signature} alt="Signature" style={{ maxHeight: "50px", maxWidth: "150px", objectFit: "contain" }} />
-                  {signatureName && <div style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>{signatureName}</div>}
-                  {signatureTitle && <div style={{ fontSize: "0.75rem", color: "#555" }}>{signatureTitle}</div>}
-                </div>
+                <img src={signature} alt="Signature" style={{ maxHeight: "44px", maxWidth: "140px", objectFit: "contain", display: "block", margin: "0 auto" }} />
               )}
               {stamp && (
-                <div style={{ textAlign: "center" }}>
-                  <div><strong>Company Stamp</strong></div>
-                  <img src={stamp} alt="Stamp" style={{ maxHeight: "50px", maxWidth: "150px", objectFit: "contain" }} />
+                <img src={stamp} alt="Stamp" style={{ maxHeight: "44px", maxWidth: "100px", objectFit: "contain", display: "block", margin: "0 auto" }} />
+              )}
+              <div style={s.signatureLine}>
+                <div style={s.signatureNameText}>{signatureName || "AUTHORIZED SIGNATORY"}</div>
+                {signatureTitle && <div style={s.signatureTitleText}>{signatureTitle}</div>}
+              </div>
+            </div>
+          </div>
+
+          {/* FOOTER DIVIDER */}
+          <div style={s.footerDivider} />
+
+          {/* FOOTER CONTACT ROW */}
+          <div style={s.footer}>
+            <div style={s.footerRow}>
+              {sellerPhone && (
+                <div style={s.footerItem}>
+                  <PhoneCircleIcon />
+                  <span>{sellerPhone}</span>
+                </div>
+              )}
+              {sellerEmail && (
+                <div style={s.footerItem}>
+                  <EmailCircleIcon />
+                  <span>{sellerEmail}</span>
+                </div>
+              )}
+              {sellerWebsite && (
+                <div style={s.footerItem}>
+                  <WebCircleIcon />
+                  <span>{sellerWebsite}</span>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Footer (contact, website, address) */}
-          <div style={{ marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "1rem", textAlign: "center", fontSize: "0.875rem", color: "#555" }}>
-            <div>{sellerPhone} &nbsp;|&nbsp; {sellerEmail} &nbsp;|&nbsp; {profile.website || ""}</div>
-            <div>{sellerAddress} {sellerLocation ? `, ${sellerLocation}` : ""}</div>
-            {footerText && <div style={{ marginTop: "0.5rem" }}>{footerText}</div>}
+            {(sellerAddress || sellerLocation) && (
+              <div style={s.footerRow}>
+                <div style={s.footerItem}>
+                  <LocationCircleIcon />
+                  <span>{[sellerAddress, sellerLocation].filter(Boolean).join(" ")}</span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Bottom dark corner accent */}
+          <div style={s.cornerAccent}>
+            <div style={s.cornerTriangle} />
+          </div>
+
         </div>
+        {/* ===================== END PRINTABLE INVOICE ===================== */}
+
       </div>
     </div>
   );
