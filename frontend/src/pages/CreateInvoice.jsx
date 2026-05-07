@@ -36,8 +36,6 @@ const injectAIModalStyles = () => {
   document.head.appendChild(style);
 };
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
-
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
@@ -45,16 +43,14 @@ function resolveImageUrl(url) {
   if (/^https?:\/\//i.test(s)) {
     try {
       const parsed = new URL(s);
-      if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-        const path = parsed.pathname + (parsed.search || "") + (parsed.hash || "");
-        return `${API_BASE.replace(/\/+$/, "")}${path}`;
-      }
+      // Keep absolute URLs as is (they include the correct origin)
       return parsed.href;
     } catch {
       // fall through
     }
   }
-  return `${API_BASE.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
+  // relative path – keep as is (will be resolved by browser)
+  return s.startsWith("/") ? s : `/${s}`;
 }
 
 function readJSON(key, fallback = null) {
@@ -143,7 +139,7 @@ const AddIcon = ({ className = "w-4 h-4" }) => (
 );
 
 export default function CreateInvoice() {
-  injectAIModalStyles(); // inject once
+  injectAIModalStyles();
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -174,12 +170,12 @@ export default function CreateInvoice() {
       fromEmail: "",
       fromAddress: "",
       fromPhone: "",
-      fromLocation: "",        // new field
+      fromLocation: "",
       client: { name: "", email: "", address: "", phone: "" },
       items: [{ id: uid(), description: "Service / Item", qty: 1, unitPrice: 0 }],
       currency: "KES",
       status: "draft",
-      taxPercent: 16,         // default Kenyan VAT (will be overwritten by profile)
+      taxPercent: 16,
       notes: "",
     };
   }
@@ -237,10 +233,10 @@ export default function CreateInvoice() {
       const token = await obtainToken();
       const headers = { Accept: "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(
-        `${API_BASE}/api/invoice?invoiceNumber=${encodeURIComponent(candidate)}`,
-        { method: "GET", headers }
-      );
+      const res = await fetch(`/api/invoice?invoiceNumber=${encodeURIComponent(candidate)}`, {
+        method: "GET",
+        headers,
+      });
       if (!res.ok) return false;
       const json = await res.json().catch(() => null);
       const data = json?.data || json || [];
@@ -261,7 +257,7 @@ export default function CreateInvoice() {
     return `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${uid().slice(0, 4)}`;
   }, [checkInvoiceExists]);
 
-  // Fetch business profile (prefills seller info and tax, but UI does not show them)
+  // Fetch business profile
   useEffect(() => {
     let mounted = true;
     async function fetchBusinessProfile() {
@@ -269,7 +265,7 @@ export default function CreateInvoice() {
       try {
         const token = await obtainToken();
         if (!token) return;
-        const res = await fetch(`${API_BASE}/api/businessProfile/me`, {
+        const res = await fetch("/api/businessProfile/me", {
           method: "GET",
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
@@ -334,7 +330,7 @@ export default function CreateInvoice() {
           const token = await obtainToken();
           const headers = { Accept: "application/json" };
           if (token) headers["Authorization"] = `Bearer ${token}`;
-          const res = await fetch(`${API_BASE}/api/invoice/${id}`, { method: "GET", headers });
+          const res = await fetch(`/api/invoice/${id}`, { method: "GET", headers });
           if (res.ok) {
             const json = await res.json().catch(() => null);
             const data = json?.data || json || null;
@@ -353,7 +349,6 @@ export default function CreateInvoice() {
         } finally {
           setLoading(false);
         }
-        // fallback to local storage
         const all = getStoredInvoices();
         const found = all.find(x => x && (x.id === id || x._id === id || x.invoiceNumber === id));
         if (found && mounted) {
@@ -363,7 +358,6 @@ export default function CreateInvoice() {
         }
         return;
       }
-      // New invoice: generate invoice number
       setInvoice((prev) => ({ ...buildDefaultInvoice(), ...prev }));
       setItems(buildDefaultInvoice().items);
       if (!isEditing) {
@@ -407,7 +401,7 @@ export default function CreateInvoice() {
         signatureDataUrl: invoice.signatureDataUrl || null,
       };
 
-      const endpoint = isEditing && invoice.id ? `${API_BASE}/api/invoice/${invoice.id}` : `${API_BASE}/api/invoice`;
+      const endpoint = isEditing && invoice.id ? `/api/invoice/${invoice.id}` : "/api/invoice";
       const method = isEditing && invoice.id ? "PUT" : "POST";
       const token = await obtainToken();
       const headers = { "Content-Type": "application/json" };
@@ -459,7 +453,7 @@ export default function CreateInvoice() {
     setAiGenerating(true);
     try {
       const token = await obtainToken();
-      const res = await fetch(`${API_BASE}/api/ai-invoice/generate`, {
+      const res = await fetch("/api/ai-invoice/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -470,7 +464,6 @@ export default function CreateInvoice() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "AI generation failed");
       const aiData = json.data;
-      // Merge AI data into current invoice (only non‑empty fields)
       setInvoice(prev => ({
         ...prev,
         invoiceNumber: aiData.invoiceNumber || prev.invoiceNumber,
@@ -524,7 +517,7 @@ export default function CreateInvoice() {
 
   return (
     <div className={createInvoiceStyles.pageContainer}>
-      {/* Header with AI button */}
+      {/* Header with AI button (using same style as Invoices page) */}
       <div className={createInvoiceStyles.headerContainer}>
         <div>
           <h1 className={createInvoiceStyles.headerTitle}>{isEditing ? "Edit Invoice" : "Create New Invoice"}</h1>
@@ -533,7 +526,7 @@ export default function CreateInvoice() {
         <div className={createInvoiceStyles.headerButtonContainer}>
           <button
             onClick={() => setAiModalOpen(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
+            className={createInvoiceStyles.aiButton}
           >
             <SparklesIcon className="w-4 h-4" /> Create with AI
           </button>
@@ -543,7 +536,7 @@ export default function CreateInvoice() {
         </div>
       </div>
 
-      {/* Invoice Details Card (simplified, no currency) */}
+      {/* Invoice Details Card */}
       <div className={createInvoiceStyles.cardContainer}>
         <div className={createInvoiceStyles.cardHeaderContainer}>
           <div className={`${createInvoiceStyles.cardIconContainer} ${createInvoiceIconColors.invoice}`}>
@@ -611,9 +604,10 @@ export default function CreateInvoice() {
         </div>
       </div>
 
+      {/* Single Column – Items table only (no right column summary) */}
       <div className={createInvoiceStyles.mainGrid}>
         <div className={createInvoiceStyles.leftColumn}>
-          {/* Bill To (Client) */}
+          {/* Bill To */}
           <div className={createInvoiceStyles.cardContainer}>
             <div className={createInvoiceStyles.cardHeaderContainer}>
               <div className={`${createInvoiceStyles.cardIconContainer} ${createInvoiceIconColors.billTo}`}>
@@ -738,27 +732,6 @@ export default function CreateInvoice() {
             </div>
           </div>
         </div>
-
-        {/* Right column – simplified: only total summary (no tax/stamp sections) */}
-        <div className={createInvoiceStyles.rightColumn}>
-          <div className={createInvoiceStyles.cardSmallContainer}>
-            <h3 className={createInvoiceStyles.cardSubtitle}>Invoice Summary</h3>
-            <div className="space-y-4">
-              <div className={createInvoiceStyles.summaryRow}>
-                <div className={createInvoiceStyles.summaryLabel}>Subtotal</div>
-                <div className={createInvoiceStyles.summaryValue}>{currencyFmt(totals.subtotal, invoice.currency)}</div>
-              </div>
-              <div className={createInvoiceStyles.taxRow}>
-                <div className="text-sm text-gray-600">Tax ({invoice.taxPercent}% VAT)</div>
-                <div className="font-medium text-gray-900">{currencyFmt(totals.tax, invoice.currency)}</div>
-              </div>
-              <div className={createInvoiceStyles.totalRow}>
-                <div className={createInvoiceStyles.totalLabel}>Total</div>
-                <div className={createInvoiceStyles.totalValue}>{currencyFmt(totals.total, invoice.currency)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Save button at the bottom */}
@@ -768,7 +741,7 @@ export default function CreateInvoice() {
         </button>
       </div>
 
-      {/* AI Modal (simple inline overlay) */}
+      {/* AI Modal */}
       {aiModalOpen && (
         <div className="ai-modal-overlay" onClick={() => setAiModalOpen(false)}>
           <div className="ai-modal-content" onClick={(e) => e.stopPropagation()}>
