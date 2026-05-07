@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "vercel-build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -30,9 +29,5 @@
     "postcss": "^8.5.14",
     "tailwindcss": "^4.2.4",
     "vite": "^7.2.4"
-  },
-  "description": "React + Vite frontend",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }
