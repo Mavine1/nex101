@@ -2,35 +2,23 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { businessProfileStyles } from "../assets/dummyStyles";
 
-// ======================== DYNAMIC BASE URL (no .env) ========================
-function getApiBase() {
-  // Use the same origin that served the page – works for any port dynamically
-  return window.location.origin;
-}
-
+// ======================== IMAGE URL RESOLVER ========================
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
-
   if (s.startsWith("blob:") || s.startsWith("data:")) return s;
-
   if (/^https?:\/\//i.test(s)) {
     try {
-      const parsed = new URL(s);
-      // If it's already an absolute URL to this same origin, keep it.
-      // No need to modify localhost/127.0.0.1 because the API is on the same origin.
-      return parsed.href;
-    } catch (e) {
+      return new URL(s).href;
+    } catch {
       // fall through
     }
   }
-
-  // Relative URL – prepend the API base (which is the current origin)
-  const base = getApiBase().replace(/\/+$/, "");
-  return `${base}/${s.replace(/^\/+/, "")}`;
+  // Relative URL – keep as is (will be resolved by the browser)
+  return s;
 }
 
-// ======================== ICON COMPONENTS (unchanged) ========================
+// ======================== ICON COMPONENTS ========================
 const UploadIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -110,7 +98,7 @@ export default function BusinessProfile() {
       }
 
       try {
-        const res = await fetch(`${getApiBase()}/api/businessProfile/me`, {
+        const res = await fetch("/api/businessProfile/me", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -171,7 +159,6 @@ export default function BusinessProfile() {
         }
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, getToken]);
 
   function updateMeta(field, value) {
@@ -240,11 +227,9 @@ export default function BusinessProfile() {
       if (files.signature) fd.append("signatureNameMeta", files.signature);
       else if (meta.signatureUrl && !meta.signatureUrl.startsWith("blob:")) fd.append("signatureUrl", meta.signatureUrl);
 
-      const url = `${getApiBase()}/api/businessProfile/me`;
-      const method = "POST";
-
-      const res = await fetch(url, {
-        method,
+      // Use relative URL – Vite proxy will forward to backend
+      const res = await fetch("/api/businessProfile/me", {
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
@@ -430,7 +415,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* Logo Upload Card */}
+        {/* Logo Upload Card – FIXED: removed nested <label> */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
@@ -455,7 +440,7 @@ export default function BusinessProfile() {
                 </div>
               </div>
             ) : (
-              <label className="cursor-pointer block">
+              <div className="cursor-pointer block" onClick={() => document.getElementById("logo-file-input").click()}>
                 <div className={`${businessProfileStyles.imagePreviewContainer} ${businessProfileStyles.hoverScale}`}>
                   <div className={businessProfileStyles.uploadIconContainer}>
                     <UploadIcon className="w-6 h-6" />
@@ -464,9 +449,15 @@ export default function BusinessProfile() {
                     <p className={businessProfileStyles.uploadTextTitle}>Upload Logo</p>
                     <p className={businessProfileStyles.uploadTextSubtitle}>PNG, JPG up to 5MB</p>
                   </div>
-                  <input type="file" accept="image/*" onChange={(e) => handleLocalFilePick("logo", e.target.files?.[0])} className="hidden" />
                 </div>
-              </label>
+                <input
+                  id="logo-file-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleLocalFilePick("logo", e.target.files?.[0])}
+                  className="hidden"
+                />
+              </div>
             )}
           </div>
         </div>
@@ -505,7 +496,7 @@ export default function BusinessProfile() {
                     </div>
                   </div>
                 ) : (
-                  <label className="cursor-pointer block">
+                  <div className="cursor-pointer block" onClick={() => document.getElementById("stamp-file-input").click()}>
                     <div className={`${businessProfileStyles.imagePreviewContainer} ${businessProfileStyles.hoverScale}`}>
                       <div className={businessProfileStyles.uploadSmallIconContainer}>
                         <ImageIcon className="w-5 h-5" />
@@ -514,9 +505,15 @@ export default function BusinessProfile() {
                         <p className={businessProfileStyles.uploadTextTitle}>Upload Stamp</p>
                         <p className={businessProfileStyles.uploadTextSubtitle}>PNG with transparent background</p>
                       </div>
-                      <input type="file" accept="image/*" onChange={(e) => handleLocalFilePick("stamp", e.target.files?.[0])} className="hidden" />
                     </div>
-                  </label>
+                    <input
+                      id="stamp-file-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleLocalFilePick("stamp", e.target.files?.[0])}
+                      className="hidden"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -541,7 +538,7 @@ export default function BusinessProfile() {
                     </div>
                   </div>
                 ) : (
-                  <label className="cursor-pointer block">
+                  <div className="cursor-pointer block" onClick={() => document.getElementById("signature-file-input").click()}>
                     <div className={`${businessProfileStyles.imagePreviewContainer} ${businessProfileStyles.hoverScale}`}>
                       <div className={businessProfileStyles.uploadSmallIconContainer}>
                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -553,9 +550,15 @@ export default function BusinessProfile() {
                         <p className={businessProfileStyles.uploadTextTitle}>Upload Signature</p>
                         <p className={businessProfileStyles.uploadTextSubtitle}>PNG with transparent background</p>
                       </div>
-                      <input type="file" accept="image/*" onChange={(e) => handleLocalFilePick("signature", e.target.files?.[0])} className="hidden" />
                     </div>
-                  </label>
+                    <input
+                      id="signature-file-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleLocalFilePick("signature", e.target.files?.[0])}
+                      className="hidden"
+                    />
+                  </div>
                 )}
               </div>
 
