@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm start",
     "dev:frontend": "cd frontend && npm run dev",
-    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "install:all": "npm install --prefix backend --include=dev && npm install --prefix frontend --include=dev",
     "vercel-build": "cd frontend && npm run build"
   },
   "repository": {
