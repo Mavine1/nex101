@@ -869,18 +869,24 @@ export default function InvoicePreview() {
           </div>
 
           {/* THANK YOU + SIGNATURE */}
-          <div style={s.thankYouRow}>
-            <div style={s.thankYou}>{footerText || "Thank you for your business!"}</div>
-            <div style={s.signatureBlock}>
-              {signature && (
-                <img src={signature} alt="Signature" style={{ maxHeight: "44px", maxWidth: "140px", objectFit: "contain", display: "block", margin: "0 auto" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "8px 32px 16px 32px" }}>
+            <div style={{ color: PINK, fontWeight: "700", fontSize: "0.9rem", fontStyle: "italic", alignSelf: "flex-end" }}>
+              {footerText || "Thank you for your business!"}
+            </div>
+            <div style={{ textAlign: "center", minWidth: "160px" }}>
+              {(signature || stamp) && (
+                <div style={{ marginBottom: "4px" }}>
+                  {signature && <img src={signature} alt="Signature" style={{ maxHeight: "44px", maxWidth: "140px", objectFit: "contain", display: "block", margin: "0 auto" }} />}
+                  {stamp && <img src={stamp} alt="Stamp" style={{ maxHeight: "44px", maxWidth: "100px", objectFit: "contain", display: "block", margin: "0 auto" }} />}
+                </div>
               )}
-              {stamp && (
-                <img src={stamp} alt="Stamp" style={{ maxHeight: "44px", maxWidth: "100px", objectFit: "contain", display: "block", margin: "0 auto" }} />
-              )}
-              <div style={s.signatureLine}>
-                <div style={s.signatureNameText}>{signatureName || "AUTHORIZED SIGNATORY"}</div>
-                {signatureTitle && <div style={s.signatureTitleText}>{signatureTitle}</div>}
+              <div style={{ borderTop: "1.5px solid #333", paddingTop: "5px" }}>
+                <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "#111", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                  {signatureName || "AUTHORIZED SIGNATORY"}
+                </div>
+                {signatureTitle && (
+                  <div style={{ fontSize: "0.76rem", color: "#555" }}>{signatureTitle}</div>
+                )}
               </div>
             </div>
           </div>
