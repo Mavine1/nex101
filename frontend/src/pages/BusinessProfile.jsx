@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
+import Swal from "sweetalert2";
 import { businessProfileStyles } from "../assets/dummyStyles";
 
 // ======================== IMAGE URL RESOLVER ========================
@@ -14,11 +15,10 @@ function resolveImageUrl(url) {
       // fall through
     }
   }
-  // Relative URL – keep as is (will be resolved by the browser)
   return s;
 }
 
-// ======================== ICON COMPONENTS ========================
+// ======================== ICON COMPONENTS (unchanged) ========================
 const UploadIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -85,7 +85,7 @@ export default function BusinessProfile() {
     }
   }
 
-  // Fetch existing profile (using /me endpoint)
+  // Fetch existing profile
   useEffect(() => {
     let mounted = true;
 
@@ -106,10 +106,7 @@ export default function BusinessProfile() {
           },
         });
 
-        if (res.status === 404) {
-          // No profile yet – keep empty form
-          return;
-        }
+        if (res.status === 404) return;
 
         if (!res.ok) {
           console.error("Failed to fetch business profile:", res.status);
@@ -201,7 +198,12 @@ export default function BusinessProfile() {
     try {
       const token = await getAuthToken();
       if (!token) {
-        alert("You must be signed in to save your business profile.");
+        Swal.fire({
+          icon: "error",
+          title: "Authentication Required",
+          text: "You must be signed in to save your business profile.",
+          confirmButtonColor: "#D0005E",
+        });
         return;
       }
 
@@ -227,7 +229,6 @@ export default function BusinessProfile() {
       if (files.signature) fd.append("signatureNameMeta", files.signature);
       else if (meta.signatureUrl && !meta.signatureUrl.startsWith("blob:")) fd.append("signatureUrl", meta.signatureUrl);
 
-      // Use relative URL – Vite proxy will forward to backend
       const res = await fetch("/api/businessProfile/me", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -265,17 +266,42 @@ export default function BusinessProfile() {
       if (saved.stampUrl) setPreviews((p) => ({ ...p, stamp: resolveImageUrl(saved.stampUrl) }));
       if (saved.signatureUrl) setPreviews((p) => ({ ...p, signature: resolveImageUrl(saved.signatureUrl) }));
 
-      alert("Profile saved successfully.");
+      Swal.fire({
+        icon: "success",
+        title: "Saved!",
+        text: "Business profile saved successfully.",
+        timer: 2000,
+        showConfirmButton: false,
+        position: "top-end",
+        toast: true,
+      });
     } catch (err) {
       console.error("Failed to save profile:", err);
-      alert(err?.message || "Failed to save profile. See console for details.");
+      Swal.fire({
+        icon: "error",
+        title: "Save Failed",
+        text: err?.message || "Failed to save profile. See console for details.",
+        confirmButtonColor: "#D0005E",
+      });
     } finally {
       setSaving(false);
     }
   }
 
-  function handleClearProfile() {
-    if (!confirm("Clear current profile data? This will remove local changes and previews.")) return;
+  async function handleClearProfile() {
+    const result = await Swal.fire({
+      title: "Clear Profile?",
+      text: "This will remove all local changes and previews. This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#D0005E",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Yes, clear it",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
     Object.values(previews).forEach((u) => {
       if (u && typeof u === "string" && u.startsWith("blob:")) {
         URL.revokeObjectURL(u);
@@ -284,6 +310,16 @@ export default function BusinessProfile() {
     setMeta({});
     setFiles({ logo: null, stamp: null, signature: null });
     setPreviews({ logo: null, stamp: null, signature: null });
+
+    Swal.fire({
+      icon: "success",
+      title: "Cleared!",
+      text: "Profile form has been reset.",
+      timer: 1500,
+      showConfirmButton: false,
+      position: "top-end",
+      toast: true,
+    });
   }
 
   // ======================== RENDER ========================
@@ -415,7 +451,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* Logo Upload Card – FIXED: removed nested <label> */}
+        {/* Logo Upload Card – fixed nested elements */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
