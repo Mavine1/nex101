@@ -13,9 +13,10 @@ const port = process.env.PORT || 4000;
 
 // MIDDLEWARES
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? process.env.FRONTEND_URL  // set this in Vercel env vars
-        : "http://localhost:5173",
+    origin: [
+        "http://localhost:5173",
+        "https://nexinvoice.vercel.app"
+    ],
     credentials: true
 }));
 app.use(clerkMiddleware());
@@ -40,4 +41,5 @@ if (process.env.NODE_ENV !== 'production') {
         console.log(`Server started on http://localhost:${port}`);
     });
 }
+
 export default app;
