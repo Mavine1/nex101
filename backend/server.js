@@ -9,18 +9,18 @@ import businessProfileRouter from './routes/businessProfileRouter.js';
 import aiInvoiceRouter from './routes/aiInvoiceRouter.js';
 
 const app = express();
-const port = 4000;
+const port = process.env.PORT || 4000;
 
 // MIDDLEWARES
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: process.env.NODE_ENV === 'production' 
+        ? process.env.FRONTEND_URL  // set this in Vercel env vars
+        : "http://localhost:5173",
     credentials: true
 }));
 app.use(clerkMiddleware());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ limit: "20mb", extended: true }));
-
-// STATIC FILES
 app.use('/uploads', express.static(path.join(process.cwd(), "uploads")));
 
 // DATABASE CONNECTION
@@ -35,6 +35,9 @@ app.get('/', (req, res) => {
     res.send('API WORKING');
 });
 
-app.listen(port, () => {
-    console.log(`Server Started on http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server started on http://localhost:${port}`);
+    });
+}
+export default app;

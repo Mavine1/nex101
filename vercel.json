@@ -7,7 +7,6 @@
       "config": {
         "distDir": "dist"
       }
-      "buildCommand": "cd frontend && npm run build"
     },
     {
       "src": "backend/server.js",
@@ -16,11 +15,7 @@
   ],
   "routes": [
     {
-      "src": "/_/backend/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src: "/api/(.*)",
+      "src": "/api/(.*)",
       "dest": "/backend/server.js"
     },
     {
