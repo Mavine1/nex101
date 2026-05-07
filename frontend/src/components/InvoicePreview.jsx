@@ -498,18 +498,20 @@ export default function InvoicePreview() {
       textTransform: "uppercase",
     },
     tdEven: {
-      padding: "9px 12px",
+      padding: "10px 12px",
       fontSize: "0.88rem",
       color: "#222",
       background: "white",
-      borderBottom: "1px solid #eee",
+      borderBottom: "1px solid #e8d0dc",
+      borderTop: "1px solid #e8d0dc",
     },
     tdOdd: {
-      padding: "9px 12px",
+      padding: "10px 12px",
       fontSize: "0.88rem",
       color: "#222",
       background: LIGHT_PINK,
-      borderBottom: "1px solid #eee",
+      borderBottom: "1px solid #e8d0dc",
+      borderTop: "1px solid #e8d0dc",
     },
     tdRight: {
       textAlign: "right",
@@ -725,19 +727,21 @@ export default function InvoicePreview() {
           {/* White space on top */}
           <div style={s.topWhiteSpace} />
 
-          {/* TOP HEADER: Logo + layered INVOICE banner */}
+          {/* TOP HEADER: Logo left + layered INVOICE shapes right */}
           <div style={s.topBar}>
-            {/* Background shapes spanning full width */}
+            {/* SVG shapes — positioned absolute behind content */}
             <svg
               style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }}
               viewBox="0 0 860 80"
               preserveAspectRatio="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Dark maroon main block — covers right portion with diagonal left edge */}
-              <polygon points="420,0 860,0 860,80 380,80" fill={DARK} />
-              {/* Pink accent shape — sits on top of dark, slightly offset diagonal */}
-              <polygon points="480,0 560,0 520,80 440,80" fill={PINK} />
+              {/* Main dark maroon trapezoid: diagonal left edge, fills rest of header */}
+              <polygon points="390,80 860,80 860,0 460,0" fill={DARK} />
+              {/* Pink accent rectangle: sits on top-right, with slight diagonal left edge */}
+              <polygon points="600,0 720,0 680,80 560,80" fill={PINK} />
+              {/* Small dark block on far right edge — thin vertical bar */}
+              <rect x="840" y="0" width="20" height="80" fill="#1a0015" />
             </svg>
 
             <div style={s.topBarLeft}>
@@ -861,16 +865,16 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* TERMS & CONDITIONS */}
-          {terms && (
-            <div style={s.termsSection}>
-              <div style={s.termsTitle}>
-                TERMS &amp; CONDITIONS
-                <span style={s.termsDivider} />
-              </div>
-              <div style={s.termsText}>{terms}</div>
+          {/* TERMS & CONDITIONS — always shown */}
+          <div style={s.termsSection}>
+            <div style={s.termsTitle}>
+              TERMS &amp; CONDITIONS
+              <span style={s.termsDivider} />
             </div>
-          )}
+            <div style={s.termsText}>
+              {terms || "Deposit payable is 70% of the total cost of the project. All Payment must be cleared after completion and approval of the project."}
+            </div>
+          </div>
 
           {/* THANK YOU + SIGNATURE */}
           <div style={s.thankYouRow}>
