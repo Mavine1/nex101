@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { dashboardStyles } from "../assets/dummyStyles";
-import KpiCard from '../components/KpiCard'; // Ensure KpiCard.jsx is using Tailwind (as provided earlier)
+import KpiCard from '../components/KpiCard';
 
-const BASE_URL = import.meta.env.VITE_API_URL;
-const HARD_RATES = { USD_TO_KES: 130 }; // Example rate: 1 USD = 130 KES
+const API_BASE = import.meta.env.VITE_API_URL;         // <-- fixed
+const HARD_RATES = { USD_TO_KES: 130 };
 
 // ---------- Currency formatter for Kenyan Shilling ----------
 function currencyFmt(amount = 0, currency = "KES") {
@@ -42,16 +42,15 @@ function capitalize(s) {
   return String(s).charAt(0).toUpperCase() + String(s).slice(1);
 }
 
-// Convert any amount to KES (Kenyan Shilling)
 function convertToKES(amount = 0, currency = "KES") {
   const n = Number(amount || 0);
   const curr = String(currency || "KES").trim().toUpperCase();
   if (curr === "KES") return n;
   if (curr === "USD") return n * HARD_RATES.USD_TO_KES;
-  return n; // fallback – assume already KES
+  return n;
 }
 
-// Icons (used for quick actions and table)
+// Icons
 const TrendingUpIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M23 6l-9.5 9.5-5-5L1 18" />
@@ -123,7 +122,6 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [businessProfile, setBusinessProfile] = useState(null);
 
-  // ---------- Obtain token ----------
   const obtainToken = useCallback(async () => {
     if (typeof getToken !== "function") return null;
     try {
@@ -138,7 +136,6 @@ const Dashboard = () => {
     }
   }, [getToken]);
 
-  // ---------- Fetch invoices ----------
   const fetchInvoices = useCallback(async () => {
     if (!isSignedIn) return;
     setLoading(true);
@@ -178,10 +175,7 @@ const Dashboard = () => {
           client: clientObj,
           amount: amountVal,
           currency,
-          status:
-            typeof inv.status === "string"
-              ? capitalize(inv.status)
-              : inv.status || "Draft",
+          status: typeof inv.status === "string" ? capitalize(inv.status) : inv.status || "Draft",
         };
       });
       setStoredInvoices(mapped);
@@ -194,7 +188,6 @@ const Dashboard = () => {
     }
   }, [isSignedIn, obtainToken]);
 
-  // ---------- Fetch business profile ----------
   const fetchBusinessProfile = useCallback(async () => {
     if (!isSignedIn || !userId) return;
     try {
@@ -217,7 +210,6 @@ const Dashboard = () => {
     }
   }, [isSignedIn, userId, obtainToken]);
 
-  // ---------- Effects ----------
   useEffect(() => {
     if (isSignedIn) {
       fetchInvoices();
@@ -228,7 +220,6 @@ const Dashboard = () => {
     }
   }, [isSignedIn, fetchInvoices, fetchBusinessProfile]);
 
-  // Storage event listener (for cross-tab sync)
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key === "invoice_v1") fetchInvoices();
@@ -237,7 +228,6 @@ const Dashboard = () => {
     return () => window.removeEventListener("storage", onStorage);
   }, [fetchInvoices]);
 
-  // ---------- KPIs calculation (all in KES) ----------
   const kpis = useMemo(() => {
     const totalInvoices = storedInvoices.length;
     let totalPaid = 0;
@@ -246,10 +236,7 @@ const Dashboard = () => {
     let unpaidCount = 0;
 
     storedInvoices.forEach((inv) => {
-      const rawAmount =
-        typeof inv.amount === "number"
-          ? inv.amount
-          : Number(inv.total ?? inv.amount ?? 0);
+      const rawAmount = typeof inv.amount === "number" ? inv.amount : Number(inv.total ?? inv.amount ?? 0);
       const invCurrency = inv.currency || "KES";
       const amtInKES = convertToKES(rawAmount, invCurrency);
 
@@ -280,24 +267,17 @@ const Dashboard = () => {
     };
   }, [storedInvoices]);
 
-  // ---------- Recent invoices (latest 5 by issueDate) ----------
   const recent = useMemo(() => {
     return storedInvoices
       .slice()
-      .sort(
-        (a, b) =>
-          (Date.parse(b.issueDate || 0) || 0) -
-          (Date.parse(a.issueDate || 0) || 0)
-      )
+      .sort((a, b) => (Date.parse(b.issueDate || 0) || 0) - (Date.parse(a.issueDate || 0) || 0))
       .slice(0, 5);
   }, [storedInvoices]);
 
-  // ---------- Helpers for table ----------
   const getClientName = (inv) => {
     if (!inv) return "";
     if (typeof inv.client === "string") return inv.client;
-    if (typeof inv.client === "object")
-      return inv.client?.name || inv.client?.company || inv.company || "";
+    if (typeof inv.client === "object") return inv.client?.name || inv.client?.company || inv.company || "";
     return inv.company || "Client";
   };
 
@@ -310,7 +290,6 @@ const Dashboard = () => {
     navigate(`/app/invoices/${inv.id}`, { state: { invoice: inv } });
   };
 
-  // ---------- Render ----------
   if (loading) {
     return <div className="p-6">Loading invoices...</div>;
   }
@@ -320,10 +299,7 @@ const Dashboard = () => {
       <div className="p-6">
         <div className="text-red-600 mb-3">Error: {error}</div>
         <div className="flex gap-2">
-          <button
-            onClick={fetchInvoices}
-            className="px-3 py-1 bg-blue-600 text-white rounded"
-          >
+          <button onClick={fetchInvoices} className="px-3 py-1 bg-blue-600 text-white rounded">
             Retry
           </button>
         </div>
@@ -358,7 +334,7 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Original Two-Column Layout */}
+      {/* Two-Column Layout */}
       <div className={dashboardStyles.mainGrid}>
         {/* Sidebar Column */}
         <div className={dashboardStyles.sidebarColumn}>
@@ -369,27 +345,16 @@ const Dashboard = () => {
               <div className={dashboardStyles.quickStatsRow}>
                 <span className={dashboardStyles.quickStatsLabel}>Paid Rate</span>
                 <span className={dashboardStyles.quickStatsValue}>
-                  {kpis.totalInvoices > 0
-                    ? ((kpis.paidCount / kpis.totalInvoices) * 100).toFixed(1)
-                    : 0}
-                  %
+                  {kpis.totalInvoices > 0 ? ((kpis.paidCount / kpis.totalInvoices) * 100).toFixed(1) : 0}%
                 </span>
               </div>
               <div className={dashboardStyles.quickStatsRow}>
-                <span className={dashboardStyles.quickStatsLabel}>
-                  Avg. Invoice Value
-                </span>
-                <span className={dashboardStyles.quickStatsValue}>
-                  {currencyFmt(kpis.averageInvoiceValue, "KES")}
-                </span>
+                <span className={dashboardStyles.quickStatsLabel}>Avg. Invoice Value</span>
+                <span className={dashboardStyles.quickStatsValue}>{currencyFmt(kpis.averageInvoiceValue, "KES")}</span>
               </div>
               <div className={dashboardStyles.quickStatsRow}>
-                <span className={dashboardStyles.quickStatsLabel}>
-                  Collection Eff.
-                </span>
-                <span className={dashboardStyles.quickStatsValue}>
-                  {kpis.paidPercentage.toFixed(1)}%
-                </span>
+                <span className={dashboardStyles.quickStatsLabel}>Collection Eff.</span>
+                <span className={dashboardStyles.quickStatsValue}>{kpis.paidPercentage.toFixed(1)}%</span>
               </div>
             </div>
           </div>
@@ -403,59 +368,35 @@ const Dashboard = () => {
                   onClick={() => navigate("/app/create-invoice")}
                   className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionBlue}`}
                 >
-                  <div
-                    className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconBlue}`}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                  <div className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconBlue}`}>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M12 5v14m-7-7h14" />
                     </svg>
                   </div>
-                  <span className={dashboardStyles.quickActionText}>
-                    Create Invoice
-                  </span>
+                  <span className={dashboardStyles.quickActionText}>Create Invoice</span>
                 </button>
 
                 <button
                   onClick={() => navigate("/app/invoices")}
                   className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
                 >
-                  <div
-                    className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}
-                  >
+                  <div className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}>
                     <FileTextIcon className="w-4 h-4" />
                   </div>
-                  <span className={dashboardStyles.quickActionText}>
-                    View All Invoices
-                  </span>
+                  <span className={dashboardStyles.quickActionText}>View All Invoices</span>
                 </button>
 
                 <button
                   onClick={() => navigate("/app/business")}
                   className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
                 >
-                  <div
-                    className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                  <div className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
                   </div>
-                  <span className={dashboardStyles.quickActionText}>
-                    Business Profile
-                  </span>
+                  <span className={dashboardStyles.quickActionText}>Business Profile</span>
                 </button>
               </div>
             </div>
@@ -468,22 +409,11 @@ const Dashboard = () => {
             <div className={dashboardStyles.tableHeader}>
               <div className={dashboardStyles.tableHeaderContent}>
                 <h3 className={dashboardStyles.tableTitle}>Recent Invoices</h3>
-                <p className="text-sm text-gray-500">
-                  Latest 5 invoices from your account
-                </p>
+                <p className="text-sm text-gray-500">Latest 5 invoices from your account</p>
               </div>
-              <button
-                onClick={() => navigate("/app/invoices")}
-                className={dashboardStyles.tableActionButton}
-              >
+              <button onClick={() => navigate("/app/invoices")} className={dashboardStyles.tableActionButton}>
                 View All
-                <svg
-                  className="w-4 h-4 ml-1"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M5 12h14m-7-7l7 7-7 7" />
                 </svg>
               </button>
@@ -493,13 +423,8 @@ const Dashboard = () => {
               <div className={dashboardStyles.emptyState}>
                 <div className={dashboardStyles.emptyStateText}>
                   <FileTextIcon className={dashboardStyles.emptyStateIcon} />
-                  <div className={dashboardStyles.emptyStateMessage}>
-                    No invoices yet
-                  </div>
-                  <button
-                    onClick={() => navigate("/app/create-invoice")}
-                    className={dashboardStyles.emptyStateAction}
-                  >
+                  <div className={dashboardStyles.emptyStateMessage}>No invoices yet</div>
+                  <button onClick={() => navigate("/app/create-invoice")} className={dashboardStyles.emptyStateAction}>
                     Create your first invoice
                   </button>
                 </div>
@@ -508,49 +433,33 @@ const Dashboard = () => {
               <table className={dashboardStyles.table}>
                 <thead>
                   <tr className={dashboardStyles.tableHead}>
-                    <th className={dashboardStyles.tableHeaderCell}>
-                      Client & ID
-                    </th>
+                    <th className={dashboardStyles.tableHeaderCell}>Client & ID</th>
                     <th className={dashboardStyles.tableHeaderCell}>Amount</th>
                     <th className={dashboardStyles.tableHeaderCell}>Status</th>
                     <th className={dashboardStyles.tableHeaderCell}>Due Date</th>
                     <th className={dashboardStyles.tableHeaderCell}>Actions</th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody>
                   {recent.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      className={dashboardStyles.tableRow}
-                      onClick={() => openInvoice(inv)}
-                    >
+                    <tr key={inv.id} className={dashboardStyles.tableRow} onClick={() => openInvoice(inv)}>
                       <td className={dashboardStyles.tableCell}>
                         <div className="flex items-center gap-3">
-                          <div className={dashboardStyles.clientAvatar}>
-                            {getClientInitial(inv)}
-                          </div>
+                          <div className={dashboardStyles.clientAvatar}>{getClientInitial(inv)}</div>
                           <div>
-                            <div className={dashboardStyles.clientInfo}>
-                              {getClientName(inv)}
-                            </div>
-                            <div className={dashboardStyles.clientSubInfo}>
-                              #{inv.id}
-                            </div>
+                            <div className={dashboardStyles.clientInfo}>{getClientName(inv)}</div>
+                            <div className={dashboardStyles.clientSubInfo}>#{inv.id}</div>
                           </div>
                         </div>
                       </td>
                       <td className={dashboardStyles.tableCell}>
-                        <div className={dashboardStyles.amountCell}>
-                          {currencyFmt(inv.amount, inv.currency || "KES")}
-                        </div>
+                        <div className={dashboardStyles.amountCell}>{currencyFmt(inv.amount, inv.currency || "KES")}</div>
                       </td>
                       <td className={dashboardStyles.tableCell}>
                         <StatusBadge status={inv.status} showIcon />
                       </td>
                       <td className={dashboardStyles.tableCell}>
-                        <div className={dashboardStyles.dateCell}>
-                          {inv.dueDate ? formatDate(inv.dueDate) : "-"}
-                        </div>
+                        <div className={dashboardStyles.dateCell}>{inv.dueDate ? formatDate(inv.dueDate) : "-"}</div>
                       </td>
                       <td className={dashboardStyles.tableCell}>
                         <div className="text-right">
