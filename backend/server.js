@@ -18,19 +18,35 @@ const port = process.env.PORT || 4000;
 
 // MIDDLEWARES
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://nexinvoice.vercel.app"
-    ],
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g., mobile apps, Postman, curl)
+        if (!origin) return callback(null, true);
+
+        // Production origin – exact match
+        const allowedProduction = 'https://nexinvoice.vercel.app';
+        if (origin === allowedProduction) return callback(null, true);
+
+        // Development: allow ANY hostname but only if the port is 5173
+        try {
+            const url = new URL(origin);
+            if (url.port === '5173') {
+                return callback(null, true);
+            }
+        } catch (err) {
+            // Invalid origin URL – block
+            return callback(new Error('Not allowed by CORS'));
+        }
+
+        // If none of the above match – block
+        callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 }));
+
 app.use(clerkMiddleware());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ limit: "20mb", extended: true }));
 
-// ❌ Static 'uploads' folder will NOT work on Vercel (ephemeral storage)
-// Instead, we conditionally enable it only in local development.
-// For production, use cloud storage (e.g., S3, Cloudinary, Vercel Blob).
 const isVercel = process.env.VERCEL === '1';
 if (!isVercel) {
     app.use('/uploads', express.static(path.join(__dirname, "uploads")));
@@ -38,7 +54,6 @@ if (!isVercel) {
 }
 
 // DATABASE CONNECTION – called once when serverless function initializes (cold start)
-// This will reuse the same connection across invocations if your DB driver supports it.
 connectDB();
 
 // ROUTES
@@ -53,7 +68,8 @@ app.get('/', (req, res) => {
 // Start server only in local development (not on Vercel)
 if (!isVercel) {
     app.listen(port, () => {
-        console.log(`✅ Server started on http://localhost:${port}`);
+        // Show only the port, no hardcoded localhost
+        console.log(`✅ Server started on port ${port}`);
     });
 } else {
     console.log('🚀 Running on Vercel (serverless mode) – no app.listen() called');
