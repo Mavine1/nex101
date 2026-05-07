@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/clerk-react";
 import { businessProfileStyles } from "../assets/dummyStyles";
 
 // ======================== CONSTANTS & HELPERS ========================
-const API_BASE = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
 
-  // keep blob/object URLs and data URIs as-is
   if (s.startsWith("blob:") || s.startsWith("data:")) return s;
 
-  // absolute http(s) -> if localhost/127.0.0.1, rewrite to API_BASE
   if (/^https?:\/\//i.test(s)) {
     try {
       const parsed = new URL(s);
@@ -22,15 +20,14 @@ function resolveImageUrl(url) {
       }
       return parsed.href;
     } catch (e) {
-      // fall through to relative handling
+      // fall through
     }
   }
 
-  // relative path like "/uploads/..." or "uploads/..." -> prefix with API_BASE
   return `${API_BASE.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
 }
 
-// ======================== ICON COMPONENTS ========================
+// ======================== ICON COMPONENTS (unchanged) ========================
 const UploadIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -70,13 +67,11 @@ const ResetIcon = ({ className = "w-4 h-4" }) => (
 
 // ======================== MAIN COMPONENT ========================
 export default function BusinessProfile() {
-  const { getToken, isSignedIn } = useAuth();
-  const { user } = useUser();
+  const { getToken, isSignedIn, userId } = useAuth(); // added userId
 
   const [meta, setMeta] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // File & preview state
   const [files, setFiles] = useState({
     logo: null,
     stamp: null,
@@ -88,7 +83,6 @@ export default function BusinessProfile() {
     signature: null,
   });
 
-  // Helper: safely get token
   async function getAuthToken() {
     if (typeof getToken !== "function") return null;
     try {
@@ -100,20 +94,20 @@ export default function BusinessProfile() {
     }
   }
 
-  // Fetch existing profile on mount
+  // Fetch existing profile using userId
   useEffect(() => {
     let mounted = true;
 
     async function fetchProfile() {
-      if (!isSignedIn) return;
+      if (!isSignedIn || !userId) return;
       const token = await getAuthToken();
       if (!token) {
-        console.warn("No auth token available — cannot fetch BusinessProfile");
+        console.warn("No auth token — cannot fetch BusinessProfile");
         return;
       }
 
       try {
-        const res = await fetch(`${API_BASE}/api/businessProfile/me`, {
+        const res = await fetch(`${API_BASE}/api/businessProfile/${userId}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -122,7 +116,7 @@ export default function BusinessProfile() {
         });
 
         if (!res.ok) {
-          if (res.status !== 204 && res.status !== 401)
+          if (res.status !== 404 && res.status !== 401)
             console.error("Failed to fetch business profile:", res.status);
           return;
         }
@@ -163,7 +157,7 @@ export default function BusinessProfile() {
 
     return () => {
       mounted = false;
-      // revoke any object URLs created locally
+      // revoke object URLs
       Object.values(previews).forEach((u) => {
         if (u && typeof u === "string" && u.startsWith("blob:")) {
           URL.revokeObjectURL(u);
@@ -171,13 +165,12 @@ export default function BusinessProfile() {
       });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn, getToken]);
+  }, [isSignedIn, userId, getToken]);
 
   function updateMeta(field, value) {
     setMeta((m) => ({ ...m, [field]: value }));
   }
 
-  // File handling helpers
   function handleLocalFilePick(kind, file) {
     if (!file) return;
     const prev = previews[kind];
@@ -209,6 +202,10 @@ export default function BusinessProfile() {
 
   async function handleSave(e) {
     e?.preventDefault();
+    if (!userId) {
+      alert("User not authenticated. Please sign in.");
+      return;
+    }
     setSaving(true);
 
     try {
@@ -230,19 +227,17 @@ export default function BusinessProfile() {
       fd.append("notes", meta.notes || "");
 
       if (files.logo) fd.append("logoName", files.logo);
-      else if (meta.logoUrl) fd.append("logoUrl", meta.logoUrl);
+      else if (meta.logoUrl && !meta.logoUrl.startsWith("blob:")) fd.append("logoUrl", meta.logoUrl);
 
       if (files.stamp) fd.append("stampName", files.stamp);
-      else if (meta.stampUrl) fd.append("stampUrl", meta.stampUrl);
+      else if (meta.stampUrl && !meta.stampUrl.startsWith("blob:")) fd.append("stampUrl", meta.stampUrl);
 
       if (files.signature) fd.append("signatureNameMeta", files.signature);
-      else if (meta.signatureUrl) fd.append("signatureUrl", meta.signatureUrl);
+      else if (meta.signatureUrl && !meta.signatureUrl.startsWith("blob:")) fd.append("signatureUrl", meta.signatureUrl);
 
-      const profileId = meta.profileId;
-      const url = profileId
-        ? `${API_BASE}/api/businessProfile/${profileId}`
-        : `${API_BASE}/api/businessProfile`;
-      const method = profileId ? "PUT" : "POST";
+      // Use userId-based endpoint
+      const url = `${API_BASE}/api/businessProfile/${userId}`;
+      const method = meta.profileId ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
@@ -280,7 +275,7 @@ export default function BusinessProfile() {
       if (saved.stampUrl) setPreviews((p) => ({ ...p, stamp: resolveImageUrl(saved.stampUrl) }));
       if (saved.signatureUrl) setPreviews((p) => ({ ...p, signature: resolveImageUrl(saved.signatureUrl) }));
 
-      alert(`Profile ${profileId ? "updated" : "created"} successfully.`);
+      alert(`Profile ${meta.profileId ? "updated" : "created"} successfully.`);
     } catch (err) {
       console.error("Failed to save profile:", err);
       alert(err?.message || "Failed to save profile. See console for details.");
@@ -301,7 +296,7 @@ export default function BusinessProfile() {
     setPreviews({ logo: null, stamp: null, signature: null });
   }
 
-  // ======================== RENDER ========================
+  // ======================== RENDER (unchanged JSX) ========================
   return (
     <div className={businessProfileStyles.container}>
       <div className={businessProfileStyles.header}>
@@ -312,7 +307,7 @@ export default function BusinessProfile() {
       </div>
 
       <form onSubmit={handleSave}>
-        {/* ----- Basic Information Card ----- */}
+        {/* Basic Information Card */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconPrimary}`}>
@@ -393,7 +388,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* ----- Logo Upload Card ----- */}
+        {/* Logo Upload Card */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
@@ -434,7 +429,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* ----- Stamp & Signature Card ----- */}
+        {/* Stamp & Signature Card */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconTertiary}`}>
@@ -548,7 +543,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* ----- Form Actions ----- */}
+        {/* Form Actions */}
         <div className={businessProfileStyles.actionsContainer}>
           <button type="button" onClick={handleClearProfile} className={businessProfileStyles.resetButton}>
             <ResetIcon className="w-4 h-4" /> Reset
