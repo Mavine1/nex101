@@ -868,25 +868,31 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* THANK YOU + SIGNATURE */}
+          {/* THANK YOU + SIGNATURE + STAMP */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "8px 32px 16px 32px" }}>
-            <div style={{ color: PINK, fontWeight: "700", fontSize: "0.9rem", fontStyle: "italic", alignSelf: "flex-end" }}>
+            <div style={{ color: PINK, fontWeight: "700", fontSize: "0.9rem", fontStyle: "italic" }}>
               {footerText || "Thank you for your business!"}
             </div>
-            <div style={{ textAlign: "center", minWidth: "160px" }}>
-              {(signature || stamp) && (
-                <div style={{ marginBottom: "4px" }}>
-                  {signature && <img src={signature} alt="Signature" style={{ maxHeight: "44px", maxWidth: "140px", objectFit: "contain", display: "block", margin: "0 auto" }} />}
-                  {stamp && <img src={stamp} alt="Stamp" style={{ maxHeight: "44px", maxWidth: "100px", objectFit: "contain", display: "block", margin: "0 auto" }} />}
+            <div style={{ display: "flex", alignItems: "flex-end", gap: "24px" }}>
+              {/* Stamp — shown beside signature if present */}
+              {stamp && (
+                <div style={{ textAlign: "center" }}>
+                  <img src={stamp} alt="Stamp" style={{ maxHeight: "60px", maxWidth: "60px", objectFit: "contain", display: "block", margin: "0 auto" }} />
                 </div>
               )}
-              <div style={{ borderTop: "1.5px solid #333", paddingTop: "5px" }}>
-                <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "#111", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                  {signatureName || "AUTHORIZED SIGNATORY"}
-                </div>
-                {signatureTitle && (
-                  <div style={{ fontSize: "0.76rem", color: "#555" }}>{signatureTitle}</div>
+              {/* Signature block */}
+              <div style={{ textAlign: "center", minWidth: "150px" }}>
+                {signature && (
+                  <img src={signature} alt="Signature" style={{ maxHeight: "36px", maxWidth: "130px", objectFit: "contain", display: "block", margin: "0 auto 4px" }} />
                 )}
+                <div style={{ borderTop: "1.5px solid #333", paddingTop: "4px" }}>
+                  <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "#111", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    {signatureName || "AUTHORIZED SIGNATORY"}
+                  </div>
+                  {signatureTitle && (
+                    <div style={{ fontSize: "0.76rem", color: "#555" }}>{signatureTitle}</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
