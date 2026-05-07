@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { dashboardStyles } from "../assets/dummyStyles";
 import KpiCard from '../components/KpiCard';
 
-const API_BASE = import.meta.env.VITE_API_URL;         // <-- fixed
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const HARD_RATES = { USD_TO_KES: 130 };
 
 // ---------- Currency formatter for Kenyan Shilling ----------
