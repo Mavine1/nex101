@@ -2,11 +2,6 @@
   "version": 2,
   "buildCommand": "cd frontend && npm install && npm run build && cd ../backend && npm install",
   "outputDirectory": "frontend/dist",
-  "functions": {
-    "backend/server.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/backend/server.js" },
     { "source": "/(.*)", "destination": "/index.html" }
