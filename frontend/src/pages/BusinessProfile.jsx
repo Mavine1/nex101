@@ -2,8 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { businessProfileStyles } from "../assets/dummyStyles";
 
-// ======================== CONSTANTS & HELPERS ========================
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+// ======================== DYNAMIC BASE URL (no .env) ========================
+function getApiBase() {
+  // Use the same origin that served the page – works for any port dynamically
+  return window.location.origin;
+}
 
 function resolveImageUrl(url) {
   if (!url) return null;
@@ -14,17 +17,17 @@ function resolveImageUrl(url) {
   if (/^https?:\/\//i.test(s)) {
     try {
       const parsed = new URL(s);
-      if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-        const path = parsed.pathname + (parsed.search || "") + (parsed.hash || "");
-        return `${API_BASE.replace(/\/+$/, "")}${path}`;
-      }
+      // If it's already an absolute URL to this same origin, keep it.
+      // No need to modify localhost/127.0.0.1 because the API is on the same origin.
       return parsed.href;
     } catch (e) {
       // fall through
     }
   }
 
-  return `${API_BASE.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
+  // Relative URL – prepend the API base (which is the current origin)
+  const base = getApiBase().replace(/\/+$/, "");
+  return `${base}/${s.replace(/^\/+/, "")}`;
 }
 
 // ======================== ICON COMPONENTS (unchanged) ========================
@@ -107,7 +110,7 @@ export default function BusinessProfile() {
       }
 
       try {
-        const res = await fetch(`${API_BASE}/api/businessProfile/me`, {
+        const res = await fetch(`${getApiBase()}/api/businessProfile/me`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -134,14 +137,16 @@ export default function BusinessProfile() {
           email: data.email ?? "",
           address: data.address ?? "",
           phone: data.phone ?? "",
-          gst: data.gst ?? "",
+          location: data.location ?? "",
+          website: data.website ?? "",
+          terms: data.terms ?? "",
+          footer: data.footer ?? "",
           logoUrl: data.logoUrl ?? null,
           stampUrl: data.stampUrl ?? null,
           signatureUrl: data.signatureUrl ?? null,
           signatureOwnerName: data.signatureOwnerName ?? "",
           signatureOwnerTitle: data.signatureOwnerTitle ?? "",
           defaultTaxPercent: data.defaultTaxPercent ?? 18,
-          notes: data.notes ?? "",
         };
 
         setMeta(serverMeta);
@@ -218,11 +223,13 @@ export default function BusinessProfile() {
       fd.append("email", meta.email || "");
       fd.append("address", meta.address || "");
       fd.append("phone", meta.phone || "");
-      fd.append("gst", meta.gst || "");
+      fd.append("location", meta.location || "");
+      fd.append("website", meta.website || "");
+      fd.append("terms", meta.terms || "");
+      fd.append("footer", meta.footer || "");
       fd.append("defaultTaxPercent", String(meta.defaultTaxPercent ?? 18));
       fd.append("signatureOwnerName", meta.signatureOwnerName || "");
       fd.append("signatureOwnerTitle", meta.signatureOwnerTitle || "");
-      fd.append("notes", meta.notes || "");
 
       if (files.logo) fd.append("logoName", files.logo);
       else if (meta.logoUrl && !meta.logoUrl.startsWith("blob:")) fd.append("logoUrl", meta.logoUrl);
@@ -233,9 +240,8 @@ export default function BusinessProfile() {
       if (files.signature) fd.append("signatureNameMeta", files.signature);
       else if (meta.signatureUrl && !meta.signatureUrl.startsWith("blob:")) fd.append("signatureUrl", meta.signatureUrl);
 
-      // Use the /me endpoint for both create and update
-      const url = `${API_BASE}/api/businessProfile/me`;
-      const method = "POST"; // backend should handle upsert
+      const url = `${getApiBase()}/api/businessProfile/me`;
+      const method = "POST";
 
       const res = await fetch(url, {
         method,
@@ -256,14 +262,16 @@ export default function BusinessProfile() {
         email: saved.email ?? meta.email,
         address: saved.address ?? meta.address,
         phone: saved.phone ?? meta.phone,
-        gst: saved.gst ?? meta.gst,
+        location: saved.location ?? meta.location,
+        website: saved.website ?? meta.website,
+        terms: saved.terms ?? meta.terms,
+        footer: saved.footer ?? meta.footer,
         logoUrl: saved.logoUrl ?? meta.logoUrl,
         stampUrl: saved.stampUrl ?? meta.stampUrl,
         signatureUrl: saved.signatureUrl ?? meta.signatureUrl,
         signatureOwnerName: saved.signatureOwnerName ?? meta.signatureOwnerName,
         signatureOwnerTitle: saved.signatureOwnerTitle ?? meta.signatureOwnerTitle,
         defaultTaxPercent: saved.defaultTaxPercent ?? meta.defaultTaxPercent,
-        notes: saved.notes ?? meta.notes,
       };
 
       setMeta(merged);
@@ -293,7 +301,7 @@ export default function BusinessProfile() {
     setPreviews({ logo: null, stamp: null, signature: null });
   }
 
-  // ======================== RENDER (unchanged JSX) ========================
+  // ======================== RENDER ========================
   return (
     <div className={businessProfileStyles.container}>
       <div className={businessProfileStyles.header}>
@@ -345,21 +353,23 @@ export default function BusinessProfile() {
               />
             </div>
             <div>
-              <label className={businessProfileStyles.label}>GST / Tax ID</label>
+              <label className={businessProfileStyles.label}>Location</label>
               <input
                 type="text"
-                value={meta.gst || ""}
-                onChange={(e) => updateMeta("gst", e.target.value)}
+                value={meta.location || ""}
+                onChange={(e) => updateMeta("location", e.target.value)}
                 className={businessProfileStyles.input}
+                placeholder="City, State, or Region"
               />
             </div>
-            <div className="md:col-span-2">
-              <label className={businessProfileStyles.label}>Address</label>
-              <textarea
-                rows={2}
-                value={meta.address || ""}
-                onChange={(e) => updateMeta("address", e.target.value)}
-                className={businessProfileStyles.textarea}
+            <div>
+              <label className={businessProfileStyles.label}>Website</label>
+              <input
+                type="url"
+                value={meta.website || ""}
+                onChange={(e) => updateMeta("website", e.target.value)}
+                className={businessProfileStyles.input}
+                placeholder="https://example.com"
               />
             </div>
             <div>
@@ -373,13 +383,48 @@ export default function BusinessProfile() {
               />
             </div>
             <div className="md:col-span-2">
-              <label className={businessProfileStyles.label}>Notes / Footer Text</label>
+              <label className={businessProfileStyles.label}>Address</label>
               <textarea
                 rows={2}
-                value={meta.notes || ""}
-                onChange={(e) => updateMeta("notes", e.target.value)}
+                value={meta.address || ""}
+                onChange={(e) => updateMeta("address", e.target.value)}
                 className={businessProfileStyles.textarea}
-                placeholder="Payment terms, thank you note, etc."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Legal & Footer Card */}
+        <div className={businessProfileStyles.cardContainer}>
+          <div className={businessProfileStyles.cardHeaderContainer}>
+            <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </div>
+            <h2 className={businessProfileStyles.cardTitle}>Legal & Footer Information</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className={businessProfileStyles.label}>Terms & Conditions</label>
+              <textarea
+                rows={4}
+                value={meta.terms || ""}
+                onChange={(e) => updateMeta("terms", e.target.value)}
+                className={businessProfileStyles.textarea}
+                placeholder="Payment terms, refund policy, delivery terms, etc."
+              />
+            </div>
+            <div>
+              <label className={businessProfileStyles.label}>Footer Text</label>
+              <textarea
+                rows={2}
+                value={meta.footer || ""}
+                onChange={(e) => updateMeta("footer", e.target.value)}
+                className={businessProfileStyles.textarea}
+                placeholder="Additional note or footer message displayed on invoices"
               />
             </div>
           </div>
