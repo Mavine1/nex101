@@ -855,13 +855,15 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* TERMS & CONDITIONS — always shown */}
+          {/* TERMS & CONDITIONS */}
           <div style={s.termsSection}>
-            <div style={s.termsTitle}>
-              TERMS &amp; CONDITIONS
-              <span style={s.termsDivider} />
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "5px" }}>
+              <span style={{ color: DARK, fontWeight: "800", fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                TERMS &amp; CONDITIONS
+              </span>
+              <span style={{ width: "80px", height: "1px", background: "#bbb", display: "inline-block", flexShrink: 0 }} />
             </div>
-            <div style={s.termsText}>
+            <div style={{ ...s.termsText, maxWidth: "55%" }}>
               {terms || "Deposit payable is 70% of the total cost of the project. All Payment must be cleared after completion and approval of the project."}
             </div>
           </div>
