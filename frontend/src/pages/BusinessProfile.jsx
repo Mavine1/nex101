@@ -3,6 +3,37 @@ import { useAuth } from "@clerk/clerk-react";
 import Swal from "sweetalert2";
 import { businessProfileStyles } from "../assets/dummyStyles";
 
+// ======================== INJECT GLOBAL STYLES FOR SWEETALERT TOASTS ========================
+const injectToastStyles = () => {
+  if (document.getElementById("swal-toast-styles")) return;
+  const style = document.createElement("style");
+  style.id = "swal-toast-styles";
+  style.innerHTML = `
+    .swal-small-toast {
+      width: 320px !important;
+      padding: 0.75rem 1rem !important;
+      font-size: 0.875rem !important;
+      border-radius: 0.5rem !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    }
+    .swal-small-toast .swal2-title {
+      font-size: 1rem !important;
+      margin-bottom: 0.25rem !important;
+    }
+    .swal-small-toast .swal2-html-container {
+      font-size: 0.8rem !important;
+      margin: 0 !important;
+    }
+    .swal-small-toast.swal2-icon-success {
+      border-left: 4px solid #22c55e !important;
+    }
+    .swal-small-toast.swal2-icon-error {
+      border-left: 4px solid #ef4444 !important;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
 // ======================== IMAGE URL RESOLVER ========================
 function resolveImageUrl(url) {
   if (!url) return null;
@@ -18,7 +49,7 @@ function resolveImageUrl(url) {
   return s;
 }
 
-// ======================== ICON COMPONENTS (unchanged) ========================
+// ======================== ICON COMPONENTS ========================
 const UploadIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -59,6 +90,11 @@ const ResetIcon = ({ className = "w-4 h-4" }) => (
 // ======================== MAIN COMPONENT ========================
 export default function BusinessProfile() {
   const { getToken, isSignedIn } = useAuth();
+
+  // Inject toast styles once
+  useEffect(() => {
+    injectToastStyles();
+  }, []);
 
   const [meta, setMeta] = useState({});
   const [saving, setSaving] = useState(false);
@@ -202,7 +238,14 @@ export default function BusinessProfile() {
           icon: "error",
           title: "Authentication Required",
           text: "You must be signed in to save your business profile.",
-          confirmButtonColor: "#D0005E",
+          toast: true,
+          position: "top-end",
+          showConfirmButton: false,
+          timer: 3000,
+          background: "#fef2f2",
+          color: "#991b1b",
+          iconColor: "#ef4444",
+          customClass: { popup: "swal-small-toast" },
         });
         return;
       }
@@ -270,18 +313,29 @@ export default function BusinessProfile() {
         icon: "success",
         title: "Saved!",
         text: "Business profile saved successfully.",
-        timer: 2000,
-        showConfirmButton: false,
-        position: "top-end",
         toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 2000,
+        background: "#f0fdf4",
+        color: "#166534",
+        iconColor: "#22c55e",
+        customClass: { popup: "swal-small-toast" },
       });
     } catch (err) {
       console.error("Failed to save profile:", err);
       Swal.fire({
         icon: "error",
         title: "Save Failed",
-        text: err?.message || "Failed to save profile. See console for details.",
-        confirmButtonColor: "#D0005E",
+        text: err?.message || "Failed to save profile.",
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 2500,
+        background: "#fef2f2",
+        color: "#991b1b",
+        iconColor: "#ef4444",
+        customClass: { popup: "swal-small-toast" },
       });
     } finally {
       setSaving(false);
@@ -315,10 +369,14 @@ export default function BusinessProfile() {
       icon: "success",
       title: "Cleared!",
       text: "Profile form has been reset.",
-      timer: 1500,
-      showConfirmButton: false,
-      position: "top-end",
       toast: true,
+      position: "top-end",
+      showConfirmButton: false,
+      timer: 1500,
+      background: "#f0fdf4",
+      color: "#166534",
+      iconColor: "#22c55e",
+      customClass: { popup: "swal-small-toast" },
     });
   }
 
@@ -451,7 +509,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* Logo Upload Card – fixed nested elements */}
+        {/* Logo Upload Card */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
