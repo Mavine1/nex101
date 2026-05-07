@@ -3,8 +3,6 @@ import Invoice from "../models/invoiceModel.js";
 import { getAuth } from "@clerk/express";
 import path from "path";
 
-const API_BASE = "http://localhost:4000";
-
 function computeTotals(items = [], taxPercent = 0) {
     const safe = Array.isArray(items) ? items.filter(Boolean) : [];
     const subtotal = safe.reduce(
@@ -16,7 +14,6 @@ function computeTotals(items = [], taxPercent = 0) {
     return { subtotal, tax, total };
 }
 
-// Parse FormData items
 function parseItemsField(val) {
     if (!val) return [];
     if (Array.isArray(val)) return val;
@@ -30,12 +27,11 @@ function parseItemsField(val) {
     return val;
 }
 
-// Check if string is ObjectId
 function isObjectIdString(val) {
     return typeof val === "string" && /^[0-9a-fA-F]{24}$/.test(val);
 }
 
-// For helper
+// ✅ FIXED: returns relative URLs (works with proxy or same-origin)
 function uploadedFilesToUrls(req) {
     const urls = {};
     if (!req.files) return urls;
@@ -50,9 +46,10 @@ function uploadedFilesToUrls(req) {
     Object.keys(mapping).forEach((field) => {
         const arr = req.files[field];
         if (Array.isArray(arr) && arr[0]) {
-            const filename =
-                arr[0].filename || (arr[0].path && path.basename(arr[0].path));
-            if (filename) urls[mapping[field]] = `${API_BASE}/uploads/${filename}`;
+            const filename = arr[0].filename || (arr[0].path && path.basename(arr[0].path));
+            if (filename) {
+                urls[mapping[field]] = `/uploads/${filename}`;
+            }
         }
     });
     return urls;
@@ -63,7 +60,6 @@ async function generateUniqueInvoiceNumber(attempts = 8) {
         const ts = Date.now().toString();
         const suffix = Math.floor(Math.random() * 900000).toString().padStart(6, "0");
         const candidate = `INV-${ts.slice(-6)}-${suffix}`;
-
         const exists = await Invoice.exists({ invoiceNumber: candidate });
         if (!exists) return candidate;
         await new Promise((r) => setTimeout(r, 2));
@@ -91,7 +87,6 @@ export async function createInvoice(req, res) {
         const totals = computeTotals(items, taxPercent);
         const fileUrls = uploadedFilesToUrls(req);
 
-        // If client supplied invoiceNumber, ensure it doesn't already exist
         let invoiceNumberProvided =
             typeof body.invoiceNumber === "string" && body.invoiceNumber.trim()
                 ? String(body.invoiceNumber).trim()
@@ -106,10 +101,8 @@ export async function createInvoice(req, res) {
             }
         }
 
-        // Generate a unique invoice number (or use provided)
         let invoiceNumber = invoiceNumberProvided || (await generateUniqueInvoiceNumber());
 
-        // Build document
         const doc = new Invoice({
             _id: new mongoose.Types.ObjectId(),
             owner: userId,
@@ -132,20 +125,13 @@ export async function createInvoice(req, res) {
             currency: body.currency || "KSH",
             status: body.status ? String(body.status).toLowerCase() : "draft",
             taxPercent,
-            logoDataUrl:
-                fileUrls.logoDataUrl || body.logoDataUrl || body.logo || null,
-            stampDataUrl:
-                fileUrls.stampDataUrl || body.stampDataUrl || body.stamp || null,
-            signatureDataUrl:
-                fileUrls.signatureDataUrl ||
-                body.signatureDataUrl ||
-                body.signature ||
-                null,
+            logoDataUrl: fileUrls.logoDataUrl || body.logoDataUrl || body.logo || null,
+            stampDataUrl: fileUrls.stampDataUrl || body.stampDataUrl || body.stamp || null,
+            signatureDataUrl: fileUrls.signatureDataUrl || body.signatureDataUrl || body.signature || null,
             signatureName: body.signatureName || "",
             signatureTitle: body.signatureTitle || "",
         });
 
-        // Save with retry on duplicate-key
         let saved = null;
         let attempts = 0;
         const maxSaveAttempts = 6;
@@ -190,7 +176,7 @@ export async function createInvoice(req, res) {
     }
 }
 
-/* ----------------- LIST OF ALL INVOICES ----------------- */
+/* ----------------- LIST ----------------- */
 export async function getInvoices(req, res) {
     try {
         const { userId } = getAuth(req) || {};
@@ -226,7 +212,7 @@ export async function getInvoices(req, res) {
     }
 }
 
-/* ----------------- GET INVOICE BY ID ----------------- */
+/* ----------------- GET BY ID ----------------- */
 export async function getInvoiceById(req, res) {
     try {
         const { userId } = getAuth(req) || {};
@@ -256,7 +242,7 @@ export async function getInvoiceById(req, res) {
     }
 }
 
-/* ----------------- UPDATE INVOICE ----------------- */
+/* ----------------- UPDATE ----------------- */
 export async function updateInvoice(req, res) {
     try {
         const { userId } = getAuth(req) || {};
@@ -288,7 +274,6 @@ export async function updateInvoice(req, res) {
 
         const body = req.body || {};
 
-        // Check invoice number conflict
         if (body.invoiceNumber && String(body.invoiceNumber).trim() !== existing.invoiceNumber) {
             const conflict = await Invoice.findOne({ invoiceNumber: String(body.invoiceNumber).trim() });
             if (conflict && String(conflict._id) !== String(existing._id)) {
@@ -334,18 +319,9 @@ export async function updateInvoice(req, res) {
             currency: body.currency,
             status: body.status ? String(body.status).toLowerCase() : undefined,
             taxPercent,
-            logoDataUrl:
-                fileUrls.logoDataUrl ||
-                (body.logoDataUrl || body.logo) ||
-                undefined,
-            stampDataUrl:
-                fileUrls.stampDataUrl ||
-                (body.stampDataUrl || body.stamp) ||
-                undefined,
-            signatureDataUrl:
-                fileUrls.signatureDataUrl ||
-                (body.signatureDataUrl || body.signature) ||
-                undefined,
+            logoDataUrl: fileUrls.logoDataUrl || body.logoDataUrl || body.logo || undefined,
+            stampDataUrl: fileUrls.stampDataUrl || body.stampDataUrl || body.stamp || undefined,
+            signatureDataUrl: fileUrls.signatureDataUrl || body.signatureDataUrl || body.signature || undefined,
             signatureName: body.signatureName,
             signatureTitle: body.signatureTitle,
         };
@@ -376,7 +352,7 @@ export async function updateInvoice(req, res) {
     }
 }
 
-/* ----------------- DELETE INVOICE ----------------- */
+/* ----------------- DELETE ----------------- */
 export async function deleteInvoice(req, res) {
     try {
         const { userId } = getAuth(req) || {};
