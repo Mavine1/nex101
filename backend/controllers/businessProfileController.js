@@ -1,7 +1,14 @@
 import { getAuth } from '@clerk/express';
 import BusinessProfile from '../models/businessProfileModel.js';
-const API_BASE = process.env.API_BASE || 'http://localhost:4000';
-// Helper function to convert uploaded files to URLs
+
+// Helper function to get the base URL from the request
+function getBaseUrl(req) {
+    const protocol = req.protocol; // 'http' or 'https'
+    const host = req.get('host');   // includes hostname and port (e.g., 'localhost:3000' or 'api.example.com')
+    return `${protocol}://${host}`;
+}
+
+// Helper function to convert uploaded files to URLs using dynamic base URL
 function uploadedFilesToUrls(req) {
     const urls = {};
     if (!req.files) return urls;
@@ -10,9 +17,10 @@ function uploadedFilesToUrls(req) {
     const stampArr = req.files.stampName || req.files.stamp || [];
     const sigArr = req.files.signatureNameMeta || req.files.signature || [];
 
-    if (logoArr[0]) urls.logoUrl = `${API_BASE}/uploads/${logoArr[0].filename}`;
-    if (stampArr[0]) urls.stampUrl = `${API_BASE}/uploads/${stampArr[0].filename}`;
-    if (sigArr[0]) urls.signatureUrl = `${API_BASE}/uploads/${sigArr[0].filename}`;
+    const baseUrl = getBaseUrl(req);
+    if (logoArr[0]) urls.logoUrl = `${baseUrl}/uploads/${logoArr[0].filename}`;
+    if (stampArr[0]) urls.stampUrl = `${baseUrl}/uploads/${stampArr[0].filename}`;
+    if (sigArr[0]) urls.signatureUrl = `${baseUrl}/uploads/${sigArr[0].filename}`;
 
     return urls;
 }
