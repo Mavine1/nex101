@@ -721,21 +721,20 @@ export default function InvoicePreview() {
           {/* White space on top */}
           <div style={s.topWhiteSpace} />
 
-          {/* TOP HEADER: Logo left + layered INVOICE shapes right */}
+          {/* TOP HEADER: Logo left + trapezium INVOICE shape right */}
           <div style={s.topBar}>
-            {/* SVG shapes — positioned absolute behind content */}
             <svg
               style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }}
-              viewBox="0 0 860 80"
+              viewBox="0 0 794 76"
               preserveAspectRatio="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Main dark maroon trapezoid: diagonal left edge, fills rest of header */}
-              <polygon points="390,80 860,80 860,0 460,0" fill={DARK} />
-              {/* Pink accent rectangle: sits on top-right, with slight diagonal left edge */}
-              <polygon points="600,0 720,0 680,80 560,80" fill={PINK} />
-              {/* Small dark block on far right edge — thin vertical bar */}
-              <rect x="840" y="0" width="20" height="80" fill="#1a0015" />
+              {/* Dark maroon trapezium: wider at bottom, narrower at top — classic trapezoid */}
+              <polygon points="340,0 794,0 794,76 290,76" fill={DARK} />
+              {/* Pink accent trapezium: overlapping on the right side of the dark shape */}
+              <polygon points="580,0 680,0 650,76 550,76" fill={PINK} />
+              {/* Small dark bar at far right edge */}
+              <rect x="774" y="0" width="20" height="76" fill="#1a0015" />
             </svg>
 
             <div style={s.topBarLeft}>
