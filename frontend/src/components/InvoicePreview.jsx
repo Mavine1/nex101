@@ -366,36 +366,46 @@ export default function InvoicePreview() {
       boxShadow: "0 2px 24px rgba(0,0,0,0.10)",
       overflow: "hidden",
     },
-    // Top header bar: logo left, dark INVOICE banner right
+    // Top white space above header
+    topWhiteSpace: {
+      height: "18px",
+      background: "white",
+    },
+    // Top header bar: logo left, layered diagonal banner right
     topBar: {
       display: "flex",
       alignItems: "stretch",
-      minHeight: "90px",
+      minHeight: "80px",
+      position: "relative",
+      overflow: "hidden",
     },
     topBarLeft: {
       flex: 1,
       display: "flex",
       alignItems: "center",
-      padding: "18px 28px",
+      padding: "14px 28px",
       background: "white",
+      zIndex: 2,
     },
+    // The right side is rendered as an SVG overlay for precise layered shapes
     topBarRight: {
-      background: DARK,
-      minWidth: "220px",
+      position: "relative",
+      minWidth: "300px",
       display: "flex",
       alignItems: "center",
-      justifyContent: "center",
-      padding: "18px 36px",
-      position: "relative",
-      clipPath: "polygon(18px 0%, 100% 0%, 100% 100%, 0% 100%)",
+      justifyContent: "flex-end",
+      paddingRight: "28px",
+      zIndex: 2,
     },
     invoiceTitle: {
       color: "white",
-      fontSize: "2.4rem",
+      fontSize: "2.2rem",
       fontWeight: "900",
-      letterSpacing: "0.12em",
+      letterSpacing: "0.14em",
       textTransform: "uppercase",
       lineHeight: 1,
+      position: "relative",
+      zIndex: 3,
     },
     // Thin pink line under header
     pinkDivider: {
@@ -467,7 +477,7 @@ export default function InvoicePreview() {
       marginBottom: "0",
     },
     thead: {
-      background: DARK,
+      background: PINK,
     },
     th: {
       color: "white",
@@ -681,8 +691,8 @@ export default function InvoicePreview() {
     },
   };
 
-  // Pad items to at least 7 rows for the table to look like the design
-  const MIN_ROWS = 7;
+  // Only 1 empty padding row — more rows added as items are created
+  const MIN_ROWS = 1;
   const paddedItems = [...items];
   while (paddedItems.length < MIN_ROWS) {
     paddedItems.push(null); // empty row
@@ -712,13 +722,29 @@ export default function InvoicePreview() {
         {/* ===================== PRINTABLE INVOICE ===================== */}
         <div id="print-area" style={s.page}>
 
-          {/* TOP HEADER: Logo + INVOICE banner */}
+          {/* White space on top */}
+          <div style={s.topWhiteSpace} />
+
+          {/* TOP HEADER: Logo + layered INVOICE banner */}
           <div style={s.topBar}>
+            {/* Background shapes spanning full width */}
+            <svg
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }}
+              viewBox="0 0 860 80"
+              preserveAspectRatio="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Dark maroon main block — covers right portion with diagonal left edge */}
+              <polygon points="420,0 860,0 860,80 380,80" fill={DARK} />
+              {/* Pink accent shape — sits on top of dark, slightly offset diagonal */}
+              <polygon points="480,0 560,0 520,80 440,80" fill={PINK} />
+            </svg>
+
             <div style={s.topBarLeft}>
               {logo
-                ? <img src={logo} alt="Logo" style={{ maxHeight: "64px", maxWidth: "180px", objectFit: "contain" }} />
+                ? <img src={logo} alt="Logo" style={{ maxHeight: "56px", maxWidth: "180px", objectFit: "contain" }} />
                 : (
-                  <div style={{ fontWeight: "900", fontSize: "1.4rem", color: DARK, letterSpacing: "0.04em" }}>
+                  <div style={{ fontWeight: "900", fontSize: "1.3rem", color: DARK, letterSpacing: "0.04em" }}>
                     {invoice.fromBusinessName || profile.businessName || "YOUR COMPANY"}
                   </div>
                 )
