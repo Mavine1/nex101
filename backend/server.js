@@ -36,10 +36,20 @@ app.get('/', (req, res) => {
     res.send('API WORKING');
 });
 
-if (process.env.NODE_ENV !== 'production') {
+// ✅ Dynamic listen – start server only when NOT on Vercel
+// Vercel sets process.env.VERCEL = '1' in serverless environment
+const isVercel = process.env.VERCEL === '1';
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (!isVercel && !isProduction) {
+    // Local development: start the server
     app.listen(port, () => {
-        console.log(`Server started on http://localhost:${port}`);
+        console.log(`✅ Server started on http://localhost:${port}`);
     });
+} else if (isVercel) {
+    // On Vercel: do NOT call app.listen() – just export the app as a serverless handler
+    console.log('🚀 Running on Vercel (serverless mode)');
 }
 
+// Export the Express app for Vercel serverless functions
 export default app;
