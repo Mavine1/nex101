@@ -693,13 +693,7 @@ export default function InvoicePreview() {
     },
   };
 
-  // Only 1 empty padding row — more rows added as items are created
-  const MIN_ROWS = 1;
-  const paddedItems = [...items];
-  while (paddedItems.length < MIN_ROWS) {
-    paddedItems.push(null); // empty row
-  }
-
+  // Only real invoice items — no padding
   return (
     <div className={invoicePreviewStyles.pageContainer}>
       <div className={invoicePreviewStyles.container}>
@@ -803,30 +797,26 @@ export default function InvoicePreview() {
                 </tr>
               </thead>
               <tbody>
-                {paddedItems.map((it, idx) => {
-                  const isLast = idx === paddedItems.length - 1;
-                  const tdStyle = (isLast || idx % 2 !== 0) ? s.tdOdd : s.tdEven;
-                  if (!it) {
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ ...s.tdEven, textAlign: "center", color: "#999", padding: "20px" }}>
+                      No items added to this invoice.
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((it, idx) => {
+                    const tdStyle = idx % 2 === 0 ? s.tdEven : s.tdOdd;
                     return (
-                      <tr key={`empty-${idx}`}>
-                        <td style={{ ...tdStyle, height: "34px" }}>&nbsp;</td>
-                        <td style={tdStyle}>&nbsp;</td>
-                        <td style={tdStyle}>&nbsp;</td>
-                        <td style={tdStyle}>&nbsp;</td>
-                        <td style={tdStyle}>&nbsp;</td>
+                      <tr key={it.id || idx}>
+                        <td style={tdStyle}>{idx + 1}</td>
+                        <td style={tdStyle}>{it.description || "—"}</td>
+                        <td style={{ ...tdStyle, ...s.tdCenter }}>{it.qty || 0}</td>
+                        <td style={{ ...tdStyle, ...s.tdRight }}>{currencyFmt(it.unitPrice || 0, invoiceCurrency)}</td>
+                        <td style={{ ...tdStyle, ...s.tdRight, ...s.tdBold }}>{currencyFmt(Number(it.qty || 0) * Number(it.unitPrice || 0), invoiceCurrency)}</td>
                       </tr>
                     );
-                  }
-                  return (
-                    <tr key={it.id || idx}>
-                      <td style={tdStyle}>{idx + 1}</td>
-                      <td style={tdStyle}>{it.description || "—"}</td>
-                      <td style={{ ...tdStyle, ...s.tdRight }}>{it.qty || 0}</td>
-                      <td style={{ ...tdStyle, ...s.tdRight }}>{currencyFmt(it.unitPrice || 0, invoiceCurrency)}</td>
-                      <td style={{ ...tdStyle, ...s.tdRight, ...s.tdBold }}>{currencyFmt(Number(it.qty || 0) * Number(it.unitPrice || 0), invoiceCurrency)}</td>
-                    </tr>
-                  );
-                })}
+                  })
+                )}
               </tbody>
             </table>
           </div>
