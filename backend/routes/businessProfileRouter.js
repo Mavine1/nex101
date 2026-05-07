@@ -27,19 +27,22 @@ const upload = multer({ storage: storage });
 // Apply clerk middleware to all routes
 businessProfileRouter.use(clerkMiddleware());
 
-// Routes
+// GET current user's profile
 businessProfileRouter.get("/me", getMyBusinessProfile);
 
+// POST - create or update (upsert) the current user's profile
+// This matches the frontend's expectation: POST /api/businessProfile/me
 businessProfileRouter.post(
-  "/",
+  "/me",
   upload.fields([
     { name: "logoName", maxCount: 1 },
     { name: "stampName", maxCount: 1 },
     { name: "signatureNameMeta", maxCount: 1 },
   ]),
-  createBusinessProfile
+  createBusinessProfile   // controller should handle "create or update" logic
 );
 
+// PUT - update by ID (optional, kept for backward compatibility)
 businessProfileRouter.put(
   "/:id",
   upload.fields([
