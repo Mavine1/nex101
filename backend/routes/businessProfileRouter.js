@@ -27,11 +27,12 @@ const upload = multer({ storage: storage });
 // Apply clerk middleware to all routes
 businessProfileRouter.use(clerkMiddleware());
 
-// GET current user's profile
+// GET current user's profile (includes location, website, terms, footer)
 businessProfileRouter.get("/me", getMyBusinessProfile);
 
 // POST - create or update (upsert) the current user's profile
-// This matches the frontend's expectation: POST /api/businessProfile/me
+// Handles all fields: businessName, email, address, phone, location,
+// website, terms, footer, signature details, tax percent, and image uploads
 businessProfileRouter.post(
   "/me",
   upload.fields([
@@ -39,7 +40,7 @@ businessProfileRouter.post(
     { name: "stampName", maxCount: 1 },
     { name: "signatureNameMeta", maxCount: 1 },
   ]),
-  createBusinessProfile   // controller now does upsert with location, website, terms, footer
+  createBusinessProfile
 );
 
 // PUT - update by ID (optional, kept for backward compatibility)
@@ -50,7 +51,7 @@ businessProfileRouter.put(
     { name: "stampName", maxCount: 1 },
     { name: "signatureNameMeta", maxCount: 1 },
   ]),
-  updateBusinessProfile   // ensure this controller also handles new fields
+  updateBusinessProfile
 );
 
 export default businessProfileRouter;
