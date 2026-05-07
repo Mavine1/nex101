@@ -9,31 +9,22 @@ import { useAuth } from "@clerk/clerk-react";
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 /* ---------- helpers ---------- */
-/* ----------------- frontend-only: normalize image URLs ----------------- */
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
-
-  // keep data/blobs as-is
   if (s.startsWith("data:") || s.startsWith("blob:")) return s;
-
-  // absolute http(s)
   if (/^https?:\/\//i.test(s)) {
     try {
       const parsed = new URL(s);
       if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-        // rewrite localhost -> API_BASE
-        const path =
-          parsed.pathname + (parsed.search || "") + (parsed.hash || "");
+        const path = parsed.pathname + (parsed.search || "") + (parsed.hash || "");
         return `${BASE_URL.replace(/\/+$/, "")}${path}`;
       }
       return parsed.href;
     } catch (e) {
-      // fall through to relative handling
+      // fall through
     }
   }
-
-  // relative paths like "/uploads/..." or "uploads/..." -> prefix with API_BASE
   return `${BASE_URL.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
 }
 
@@ -45,23 +36,15 @@ function normalizeInvoiceFromServer(inv = {}) {
     (inv.subtotal !== undefined ? inv.subtotal + (inv.tax ?? 0) : 0);
   const status = inv.status ?? inv.statusLabel ?? "Draft";
 
-  // Resolve any image/url fields so frontend doesn't try to load localhost from deployed client
-  const logo = resolveImageUrl(
-    inv.logoDataUrl ?? inv.logoUrl ?? inv.logo ?? null
-  );
-  const stamp = resolveImageUrl(
-    inv.stampDataUrl ?? inv.stampUrl ?? inv.stamp ?? null
-  );
-  const signature = resolveImageUrl(
-    inv.signatureDataUrl ?? inv.signatureUrl ?? inv.signature ?? null
-  );
+  const logo = resolveImageUrl(inv.logoDataUrl ?? inv.logoUrl ?? inv.logo ?? null);
+  const stamp = resolveImageUrl(inv.stampDataUrl ?? inv.stampUrl ?? inv.stamp ?? null);
+  const signature = resolveImageUrl(inv.signatureDataUrl ?? inv.signatureUrl ?? inv.signature ?? null);
 
   return {
     ...inv,
     id,
     amount,
     status,
-    // normalized image fields (safe for deployed frontend)
     logo,
     stamp,
     signature,
@@ -70,8 +53,7 @@ function normalizeInvoiceFromServer(inv = {}) {
 
 function normalizeClient(raw) {
   if (!raw) return { name: "", email: "", address: "", phone: "" };
-  if (typeof raw === "string")
-    return { name: raw, email: "", address: "", phone: "" };
+  if (typeof raw === "string") return { name: raw, email: "", address: "", phone: "" };
   if (typeof raw === "object") {
     return {
       name: raw.name ?? raw.company ?? raw.client ?? "",
@@ -100,7 +82,6 @@ function formatCurrency(amount = 0, currency = "INR") {
   }
 }
 
-/* ---------- date formatting helper: DD/MM/YYYY (e.g. 07/12/2025) ---------- */
 function formatDate(dateInput) {
   if (!dateInput) return "—";
   const d = dateInput instanceof Date ? dateInput : new Date(String(dateInput));
@@ -111,71 +92,35 @@ function formatDate(dateInput) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-/* icons (same as you had) */
+/* icons */
 const SearchIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
   </svg>
 );
 const SortIcon = ({ className = "w-4 h-4", direction = "asc" }) => (
-  <svg
-    className={`${className} ${direction === "desc" ? "rotate-180" : ""}`}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg className={`${className} ${direction === "desc" ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
   </svg>
 );
 const FilterIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
   </svg>
 );
 const PlusIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M12 5v14m-7-7h14" />
   </svg>
 );
 const EyeIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 const ResetIcon = ({ className = "w-4 h-4" }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
     <path d="M3 3v5h5" />
   </svg>
@@ -209,9 +154,7 @@ function Pagination({ page, totalPages, onChange }) {
               type="button"
               onClick={() => onChange(p)}
               className={`${invoicesStyles.paginationNumber} ${
-                p === page
-                  ? invoicesStyles.paginationNumberActive
-                  : invoicesStyles.paginationNumberInactive
+                p === page ? invoicesStyles.paginationNumberActive : invoicesStyles.paginationNumberInactive
               }`}
             >
               {p}
@@ -231,11 +174,9 @@ function Pagination({ page, totalPages, onChange }) {
   );
 }
 
-/* uid helper */
 function uid() {
   try {
-    if (typeof crypto !== "undefined" && crypto.randomUUID)
-      return crypto.randomUUID();
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   } catch {}
   return Math.random().toString(36).slice(2, 9);
 }
@@ -245,7 +186,6 @@ export default function InvoicesPage() {
   const navigate = useNavigate();
   const { getToken, isSignedIn } = useAuth();
 
-  // helper to obtain token (with a forceRefresh retry)
   const obtainToken = useCallback(async () => {
     if (typeof getToken !== "function") return null;
     try {
@@ -278,7 +218,7 @@ export default function InvoicesPage() {
   const [aiOpen, setAiOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
-  // fetch invoices from backend (auth-aware)
+  // fetch invoices from backend
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -287,7 +227,7 @@ export default function InvoicesPage() {
       const headers = { Accept: "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/api/invoice`, {
+      const res = await fetch(`${BASE_URL}/api/invoice`, {
         method: "GET",
         headers,
       });
@@ -308,18 +248,16 @@ export default function InvoicesPage() {
     } catch (err) {
       console.error("fetchInvoices error:", err);
       setError(err?.message || "Failed to load invoices");
-      // keep existing list if any
     } finally {
       setLoading(false);
     }
   }, [obtainToken]);
 
   useEffect(() => {
-    // load invoices on mount and whenever auth state changes
     fetchInvoices();
   }, [fetchInvoices, isSignedIn]);
 
-  // client-side filtering/sorting (same logic)
+  // client-side filtering/sorting
   const filtered = useMemo(() => {
     let arr = Array.isArray(allInvoices) ? allInvoices.slice() : [];
 
@@ -330,31 +268,20 @@ export default function InvoicesPage() {
         return (
           (client.name && client.name.toLowerCase().includes(q)) ||
           (i.id && i.id.toLowerCase().includes(q)) ||
-          String(i.email || "")
-            .toLowerCase()
-            .includes(q) ||
-          String(i.company || "")
-            .toLowerCase()
-            .includes(q)
+          String(i.email || "").toLowerCase().includes(q) ||
+          String(i.company || "").toLowerCase().includes(q)
         );
       });
     }
 
     if (status !== "all")
       arr = arr.filter(
-        (i) =>
-          (i.status || "").toString().toLowerCase() ===
-          status.toString().toLowerCase()
+        (i) => (i.status || "").toString().toLowerCase() === status.toString().toLowerCase()
       );
 
     if (from || to) {
       arr = arr.filter((i) => {
-        const d = new Date(i.issueDate || i.date || i.createdAt).setHours(
-          0,
-          0,
-          0,
-          0
-        );
+        const d = new Date(i.issueDate || i.date || i.createdAt).setHours(0, 0, 0, 0);
         if (from) {
           const f = new Date(from).setHours(0, 0, 0, 0);
           if (d < f) return false;
@@ -376,8 +303,7 @@ export default function InvoicesPage() {
 
       const ad = Date.parse(ak || a.issueDate || a.dueDate || "");
       const bd = Date.parse(bk || b.issueDate || b.dueDate || "");
-      if (!isNaN(ad) && !isNaN(bd))
-        return sortBy.dir === "asc" ? ad - bd : bd - ad;
+      if (!isNaN(ad) && !isNaN(bd)) return sortBy.dir === "asc" ? ad - bd : bd - ad;
 
       const as = (ak || "").toString().toLowerCase();
       const bs = (bk || "").toString().toLowerCase();
@@ -399,9 +325,7 @@ export default function InvoicesPage() {
 
   function handleSort(key) {
     setSortBy((s) =>
-      s.key === key
-        ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: "asc" }
+      s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
     );
   }
 
@@ -410,7 +334,6 @@ export default function InvoicesPage() {
     navigate(`/app/invoices/${inv.id}/preview`, { state: { invoice: found } });
   }
 
-  // delete invoice (backend)
   async function handleDeleteInvoice(inv) {
     if (!inv?.id) return;
     if (!confirm(`Delete invoice ${inv.id}? This cannot be undone.`)) return;
@@ -421,13 +344,10 @@ export default function InvoicesPage() {
         navigate("/login");
         return;
       }
-      const res = await fetch(
-        `${API_BASE}/api/invoice/${encodeURIComponent(inv.id)}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await fetch(`${BASE_URL}/api/invoice/${encodeURIComponent(inv.id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.status === 401) {
         alert("Unauthorized. Please sign in.");
         navigate("/login");
@@ -445,16 +365,12 @@ export default function InvoicesPage() {
     }
   }
 
-  // AI flow: call AI -> create invoice on backend (requires auth).
-  // NOTE: If the AI provider returns quota/429 (or any non-ok), this function throws
-  // an Error with a readable message — the modal will display it.
   async function handleGenerateFromAI(rawText) {
     setAiLoading(true);
     try {
-      // Prefer server-side AI if available
-      if (API_BASE) {
+      if (BASE_URL) {
         const token = await obtainToken();
-        const aiRes = await fetch(`${API_BASE}/api/ai/generate`, {
+        const aiRes = await fetch(`${BASE_URL}/api/ai/generate`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -464,8 +380,6 @@ export default function InvoicesPage() {
         });
 
         const bodyText = await aiRes.text().catch(() => null);
-
-        // try parse JSON if possible
         let bodyJson = null;
         try {
           bodyJson = bodyText ? JSON.parse(bodyText) : null;
@@ -473,45 +387,34 @@ export default function InvoicesPage() {
           bodyJson = null;
         }
 
-        // if server returned an error status: surface clear message (esp. 429/quota)
         if (!aiRes.ok) {
           const serverMessage =
             (bodyJson && (bodyJson.message || bodyJson.detail)) ||
             bodyText ||
             `AI generate failed (${aiRes.status})`;
 
-          if (
-            aiRes.status === 429 ||
-            /quota|exhausted|resource_exhausted/i.test(serverMessage)
-          ) {
-            // explicit quota message
+          if (aiRes.status === 429 || /quota|exhausted|resource_exhausted/i.test(serverMessage)) {
             throw new Error(`AI provider quota/exhausted: ${serverMessage}`);
           }
-
-          // Other server errors
           throw new Error(serverMessage);
         }
 
-        // OK - parse AI invoice
-        const aiJson =
-          bodyJson ||
-          (await (async () => {
-            try {
-              return JSON.parse(bodyText || "");
-            } catch {
-              return null;
-            }
-          })());
+        const aiJson = bodyJson || (await (async () => {
+          try {
+            return JSON.parse(bodyText || "");
+          } catch {
+            return null;
+          }
+        })());
 
         const aiInvoice = aiJson?.data || aiJson;
         if (!aiInvoice) {
           throw new Error("AI returned no invoice data (unexpected response).");
         }
 
-        // Now send to create invoice endpoint (backend) if we have token (requires auth)
         const tokenForCreate = await obtainToken();
         if (tokenForCreate) {
-          const createRes = await fetch(`${API_BASE}/api/invoice`, {
+          const createRes = await fetch(`${BASE_URL}/api/invoice`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -534,30 +437,24 @@ export default function InvoicesPage() {
           }
 
           const createJson = await createRes.json().catch(() => null);
-          const saved = normalizeInvoiceFromServer(
-            createJson?.data || createJson
-          );
+          const saved = normalizeInvoiceFromServer(createJson?.data || createJson);
           await fetchInvoices();
           setAiOpen(false);
-          navigate(`/app/invoices/${saved.id}/edit`, {
-            state: { invoice: saved },
-          });
+          navigate(`/app/invoices/${saved.id}/edit`, { state: { invoice: saved } });
           return;
         } else {
-          // no token: creation requires sign-in
           throw new Error(
             "Creating invoice requires sign-in. Please sign in to save the AI-generated invoice."
           );
         }
       }
 
-      // If API_BASE not configured, fallback to UI-only creation (unchanged)
+      // Fallback: UI-only creation (if no BASE_URL)
       const newId = `INV-${Math.floor(Math.random() * 900000) + 1000}`;
-      const firstLine =
-        (rawText || "")
-          .split(/\r?\n/)
-          .map((l) => l.trim())
-          .find(Boolean) || "";
+      const firstLine = (rawText || "")
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .find(Boolean) || "";
       const clientPlaceholder = firstLine.length
         ? firstLine.length > 60
           ? firstLine.slice(0, 57) + "..."
@@ -580,15 +477,12 @@ export default function InvoicesPage() {
 
       setAllInvoices((prev) => [newInvoice, ...(prev || [])]);
       setAiOpen(false);
-      navigate(`/app/invoices/${newId}/edit`, {
-        state: { invoice: newInvoice },
-      });
+      navigate(`/app/invoices/${newId}/edit`, { state: { invoice: newInvoice } });
     } finally {
       setAiLoading(false);
     }
   }
 
-  // Helper: client initial
   const getClientInitial = (client) => {
     const c = normalizeClient(client);
     return c.name ? c.name.charAt(0).toUpperCase() : "C";
@@ -606,11 +500,7 @@ export default function InvoicesPage() {
         </div>
 
         <div className={invoicesStyles.headerActions}>
-          <button
-            type="button"
-            onClick={() => setAiOpen(true)}
-            className={invoicesStyles.aiButton}
-          >
+          <button type="button" onClick={() => setAiOpen(true)} className={invoicesStyles.aiButton}>
             <GeminiIcon className="w-6 h-6 group-hover:scale-110 transition-transform flex-none" />
             Create with AI
           </button>
@@ -628,32 +518,14 @@ export default function InvoicesPage() {
 
       {/* Error banner */}
       {error && (
-        <div
-          style={{
-            padding: 12,
-            background: "#fff4f4",
-            color: "#7f1d1d",
-            borderRadius: 6,
-            marginBottom: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+        <div style={{ padding: 12, background: "#fff4f4", color: "#7f1d1d", borderRadius: 6, marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>{error}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 type="button"
                 onClick={() => fetchInvoices()}
-                style={{
-                  padding: "6px 10px",
-                  background: "#efefef",
-                  borderRadius: 4,
-                }}
+                style={{ padding: "6px 10px", background: "#efefef", borderRadius: 4 }}
               >
                 Retry
               </button>
@@ -661,12 +533,7 @@ export default function InvoicesPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  style={{
-                    padding: "6px 10px",
-                    background: "#111827",
-                    color: "white",
-                    borderRadius: 4,
-                  }}
+                  style={{ padding: "6px 10px", background: "#111827", color: "white", borderRadius: 4 }}
                 >
                   Sign in
                 </button>
@@ -684,33 +551,21 @@ export default function InvoicesPage() {
         </div>
         <div className={invoicesStyles.statCard}>
           <div className={invoicesStyles.statValue}>
-            {
-              allInvoices.filter(
-                (inv) => (inv.status || "").toString().toLowerCase() === "paid"
-              ).length
-            }
+            {allInvoices.filter((inv) => (inv.status || "").toString().toLowerCase() === "paid").length}
           </div>
           <div className={invoicesStyles.statLabel}>Paid</div>
         </div>
         <div className={invoicesStyles.statCard}>
           <div className={invoicesStyles.statValue}>
-            {
-              allInvoices.filter((inv) =>
-                ["unpaid", "overdue"].includes(
-                  (inv.status || "").toString().toLowerCase()
-                )
-              ).length
-            }
+            {allInvoices.filter((inv) =>
+              ["unpaid", "overdue"].includes((inv.status || "").toString().toLowerCase())
+            ).length}
           </div>
           <div className={invoicesStyles.statLabel}>Unpaid</div>
         </div>
         <div className={invoicesStyles.statCard}>
           <div className={invoicesStyles.statValue}>
-            {
-              allInvoices.filter(
-                (inv) => (inv.status || "").toString().toLowerCase() === "draft"
-              ).length
-            }
+            {allInvoices.filter((inv) => (inv.status || "").toString().toLowerCase() === "draft").length}
           </div>
           <div className={invoicesStyles.statLabel}>Drafts</div>
         </div>
@@ -726,20 +581,14 @@ export default function InvoicesPage() {
             <h2 className={invoicesStyles.filtersTitle}>Filters & Search</h2>
           </div>
           <div className={invoicesStyles.filtersCount}>
-            Showing{" "}
-            <span className={invoicesStyles.filtersCountNumber}>
-              {filtered.length}
-            </span>{" "}
-            of {allInvoices.length} invoices
+            Showing <span className={invoicesStyles.filtersCountNumber}>{filtered.length}</span> of{" "}
+            {allInvoices.length} invoices
           </div>
         </div>
 
         <div className={invoicesStyles.filtersGrid}>
           <div className={invoicesStyles.searchContainer}>
-            <label
-              htmlFor="invoice-search"
-              className={invoicesStyles.filterLabel}
-            >
+            <label htmlFor="invoice-search" className={invoicesStyles.filterLabel}>
               Search Invoices
             </label>
             <div className={invoicesStyles.searchInputContainer}>
@@ -762,10 +611,7 @@ export default function InvoicesPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="status-filter"
-              className={invoicesStyles.filterLabel}
-            >
+            <label htmlFor="status-filter" className={invoicesStyles.filterLabel}>
               Status
             </label>
             <select
@@ -853,11 +699,7 @@ export default function InvoicesPage() {
             >
               <ResetIcon className="w-4 h-4" /> Reset Filters
             </button>
-            <button
-              type="button"
-              onClick={() => fetchInvoices()}
-              className={invoicesStyles.resetButton}
-            >
+            <button type="button" onClick={() => fetchInvoices()} className={invoicesStyles.resetButton}>
               Refresh
             </button>
           </div>
@@ -871,11 +713,7 @@ export default function InvoicesPage() {
             <div>
               <h3 className={invoicesStyles.tableTitle}>All Invoices</h3>
               <p className={invoicesStyles.tableSubtitle}>
-                Sorted by{" "}
-                <span className={invoicesStyles.tableSubtitleBold}>
-                  {sortBy.key}
-                </span>{" "}
-                ·{" "}
+                Sorted by <span className={invoicesStyles.tableSubtitleBold}>{sortBy.key}</span> ·{" "}
                 <span className={invoicesStyles.tableSubtitleBold}>
                   {sortBy.dir === "asc" ? "Ascending" : "Descending"}
                 </span>
@@ -888,48 +726,24 @@ export default function InvoicesPage() {
           <table className={invoicesStyles.table}>
             <thead>
               <tr className={invoicesStyles.tableHead}>
-                <th
-                  onClick={() => handleSort("client")}
-                  className={invoicesStyles.tableHeaderCell}
-                >
+                <th onClick={() => handleSort("client")} className={invoicesStyles.tableHeaderCell}>
                   <div className={invoicesStyles.tableHeaderContent}>
-                    Client{" "}
-                    <SortIcon
-                      direction={sortBy.key === "client" ? sortBy.dir : "asc"}
-                    />
+                    Client <SortIcon direction={sortBy.key === "client" ? sortBy.dir : "asc"} />
                   </div>
                 </th>
-                <th
-                  onClick={() => handleSort("amount")}
-                  className={invoicesStyles.tableHeaderCell}
-                >
+                <th onClick={() => handleSort("amount")} className={invoicesStyles.tableHeaderCell}>
                   <div className={invoicesStyles.tableHeaderContent}>
-                    Amount{" "}
-                    <SortIcon
-                      direction={sortBy.key === "amount" ? sortBy.dir : "asc"}
-                    />
+                    Amount <SortIcon direction={sortBy.key === "amount" ? sortBy.dir : "asc"} />
                   </div>
                 </th>
-                <th
-                  onClick={() => handleSort("status")}
-                  className={invoicesStyles.tableHeaderCell}
-                >
+                <th onClick={() => handleSort("status")} className={invoicesStyles.tableHeaderCell}>
                   <div className={invoicesStyles.tableHeaderContent}>
-                    Status{" "}
-                    <SortIcon
-                      direction={sortBy.key === "status" ? sortBy.dir : "asc"}
-                    />
+                    Status <SortIcon direction={sortBy.key === "status" ? sortBy.dir : "asc"} />
                   </div>
                 </th>
-                <th
-                  onClick={() => handleSort("dueDate")}
-                  className={invoicesStyles.tableHeaderCell}
-                >
+                <th onClick={() => handleSort("dueDate")} className={invoicesStyles.tableHeaderCell}>
                   <div className={invoicesStyles.tableHeaderContent}>
-                    Due Date{" "}
-                    <SortIcon
-                      direction={sortBy.key === "dueDate" ? sortBy.dir : "asc"}
-                    />
+                    Due Date <SortIcon direction={sortBy.key === "dueDate" ? sortBy.dir : "asc"} />
                   </div>
                 </th>
                 <th className={invoicesStyles.tableHeaderCellRight}>Actions</th>
@@ -943,19 +757,11 @@ export default function InvoicesPage() {
                   <tr key={inv.id} className={invoicesStyles.tableRow}>
                     <td className={invoicesStyles.clientCell}>
                       <div className={invoicesStyles.clientContainer}>
-                        <div className={invoicesStyles.clientAvatar}>
-                          {clientInitial}
-                        </div>
+                        <div className={invoicesStyles.clientAvatar}>{clientInitial}</div>
                         <div>
-                          <div className={invoicesStyles.clientInfo}>
-                            {client.name || inv.company || inv.id}
-                          </div>
-                          <div className={invoicesStyles.clientId}>
-                            {inv.id}
-                          </div>
-                          <div className={invoicesStyles.clientEmail}>
-                            {client.email || inv.email}
-                          </div>
+                          <div className={invoicesStyles.clientInfo}>{client.name || inv.company || inv.id}</div>
+                          <div className={invoicesStyles.clientId}>{inv.id}</div>
+                          <div className={invoicesStyles.clientEmail}>{client.email || inv.email}</div>
                         </div>
                       </div>
                     </td>
@@ -963,22 +769,12 @@ export default function InvoicesPage() {
                       {formatCurrency(inv.amount || 0, inv.currency)}
                     </td>
                     <td className={invoicesStyles.statusCell}>
-                      <StatusBadge
-                        status={inv.status}
-                        size="default"
-                        showIcon
-                      />
+                      <StatusBadge status={inv.status} size="default" showIcon />
                     </td>
-                    <td className={invoicesStyles.dateCell}>
-                      {inv.dueDate ? formatDate(inv.dueDate) : "—"}
-                    </td>
+                    <td className={invoicesStyles.dateCell}>{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
                     <td className={invoicesStyles.actionsCell}>
                       <div className={invoicesStyles.actionsContainer}>
-                        <button
-                          type="button"
-                          onClick={() => openInvoice(inv)}
-                          className={invoicesStyles.viewButton}
-                        >
+                        <button type="button" onClick={() => openInvoice(inv)} className={invoicesStyles.viewButton}>
                           <EyeIcon className={invoicesStyles.buttonIcon} /> View
                         </button>
 
@@ -987,11 +783,7 @@ export default function InvoicesPage() {
                           onClick={() => handleDeleteInvoice(inv)}
                           className={invoicesStyles.sendButton}
                           title="Delete invoice"
-                          style={{
-                            background: "#ffefef",
-                            color: "#b91c1c",
-                            borderColor: "#fca5a5",
-                          }}
+                          style={{ background: "#ffefef", color: "#b91c1c", borderColor: "#fca5a5" }}
                         >
                           Delete
                         </button>
@@ -1007,12 +799,9 @@ export default function InvoicesPage() {
                       <div className={invoicesStyles.emptyStateIconContainer}>
                         <SearchIcon className={invoicesStyles.emptyStateIcon} />
                       </div>
-                      <div className={invoicesStyles.emptyStateTitle}>
-                        No invoices found
-                      </div>
+                      <div className={invoicesStyles.emptyStateTitle}>No invoices found</div>
                       <p className={invoicesStyles.emptyStateMessage}>
-                        Try adjusting your search filters or create a new
-                        invoice to get started.
+                        Try adjusting your search filters or create a new invoice to get started.
                       </p>
                       <button
                         type="button"
@@ -1038,22 +827,13 @@ export default function InvoicesPage() {
 
         {pageData.length > 0 && (
           <div className={invoicesStyles.paginationContainer}>
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onChange={(p) => setPage(p)}
-            />
+            <Pagination page={page} totalPages={totalPages} onChange={(p) => setPage(p)} />
           </div>
         )}
       </div>
 
       {/* AI modal */}
-      <AiInvoiceModal
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        onGenerate={handleGenerateFromAI}
-        initialText=""
-      />
+      <AiInvoiceModal open={aiOpen} onClose={() => setAiOpen(false)} onGenerate={handleGenerateFromAI} initialText="" />
     </div>
   );
 }
