@@ -6,7 +6,7 @@ const businessProfileSchema = new mongoose.Schema({
     email: { type: String, required: false, trim: true, lowercase: true, default: "" },
     address: { type: String, required: false, default: "" },
     phone: { type: String, required: false, default: "" },
-    gst: { type: String, required: false, default: "" },
+    location: { type: String, required: false, default: "" },      // Replaces GST/Tax ID
     
     // for images
     logoUrl: { type: String, required: false, default: null },
@@ -17,6 +17,11 @@ const businessProfileSchema = new mongoose.Schema({
     signatureOwnerTitle: { type: String, required: false, default: "" },
     
     defaultTaxPercent: { type: Number, required: false, default: 18 },
+
+    // New fields
+    website: { type: String, required: false, default: "" },        // Business website URL
+    terms: { type: String, required: false, default: "" },          // Terms & conditions text
+    footer: { type: String, required: false, default: "" },         // Custom footer text
 }, {
     timestamps: true
 });
