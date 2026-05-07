@@ -9,55 +9,64 @@ import invoiceRouter from './routes/invoiceRouter.js';
 import businessProfileRouter from './routes/businessProfileRouter.js';
 import aiInvoiceRouter from './routes/aiInvoiceRouter.js';
 
-// Required for __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 4000;
+const isVercel = process.env.VERCEL === '1';
 
 // MIDDLEWARES
-app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://nexinvoice.vercel.app"
-    ],
-    credentials: true
-}));
+// Only enable CORS if you need to accept requests from other domains.
+// When frontend is served by Express, CORS is unnecessary.
+if (!isVercel) {
+  app.use(cors()); // or remove entirely
+}
 app.use(clerkMiddleware());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ limit: "20mb", extended: true }));
 
-// ❌ Static 'uploads' folder will NOT work on Vercel (ephemeral storage)
-// Instead, we conditionally enable it only in local development.
-// For production, use cloud storage (e.g., S3, Cloudinary, Vercel Blob).
-const isVercel = process.env.VERCEL === '1';
+// Static 'uploads' folder – local only
 if (!isVercel) {
-    app.use('/uploads', express.static(path.join(__dirname, "uploads")));
-    console.log('📁 Uploads folder served locally only');
+  app.use('/uploads', express.static(path.join(__dirname, "uploads")));
+  console.log('📁 Uploads folder served locally only');
 }
 
-// DATABASE CONNECTION – called once when serverless function initializes (cold start)
-// This will reuse the same connection across invocations if your DB driver supports it.
+// Database connection
 connectDB();
 
-// ROUTES
+// API ROUTES
 app.use('/api/invoice', invoiceRouter);
 app.use('/api/businessProfile', businessProfileRouter);
 app.use('/api/ai', aiInvoiceRouter);
 
-app.get('/', (req, res) => {
-    res.send('API WORKING');
+// HEALTH CHECK (optional)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
-// Start server only in local development (not on Vercel)
+// ------------------ SERVE FRONTEND (same origin) ------------------
+// This makes your frontend use the same host+port as your backend.
+// No more hardcoded localhost in fetch() calls – just "/api/..." works.
+const frontendDist = path.join(__dirname, "../frontend/dist"); // adjust path as needed
+if (!isVercel && require('fs').existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  // Catch-all: serve index.html for any non-API route (SPA support)
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
+// On Vercel, your frontend is deployed separately, so the above is skipped.
+// For production (Vercel), keep using relative URLs – they work automatically.
+
+// Start server (local only)
 if (!isVercel) {
-    app.listen(port, () => {
-        console.log(`✅ Server started on http://localhost:${port}`);
-    });
+  app.listen(port, () => {
+    console.log(`✅ Server running on port ${port}`);
+    console.log(`👉 Open http://localhost:${port} in your browser`);
+  });
 } else {
-    console.log('🚀 Running on Vercel (serverless mode) – no app.listen() called');
+  console.log('🚀 Running on Vercel (serverless mode)');
 }
 
-// Export for Vercel serverless functions
 export default app;
