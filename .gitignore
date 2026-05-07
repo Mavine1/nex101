@@ -2,3 +2,5 @@ cron-logs.json
 .env
 node_modules/
 /.env
+frontend/.env.production
+frontend/.env.development
