@@ -67,7 +67,7 @@ const ResetIcon = ({ className = "w-4 h-4" }) => (
 
 // ======================== MAIN COMPONENT ========================
 export default function BusinessProfile() {
-  const { getToken, isSignedIn, userId } = useAuth(); // added userId
+  const { getToken, isSignedIn } = useAuth();
 
   const [meta, setMeta] = useState({});
   const [saving, setSaving] = useState(false);
@@ -94,12 +94,12 @@ export default function BusinessProfile() {
     }
   }
 
-  // Fetch existing profile using userId
+  // Fetch existing profile (using /me endpoint)
   useEffect(() => {
     let mounted = true;
 
     async function fetchProfile() {
-      if (!isSignedIn || !userId) return;
+      if (!isSignedIn) return;
       const token = await getAuthToken();
       if (!token) {
         console.warn("No auth token — cannot fetch BusinessProfile");
@@ -107,7 +107,7 @@ export default function BusinessProfile() {
       }
 
       try {
-        const res = await fetch(`${API_BASE}/api/businessProfile/${userId}`, {
+        const res = await fetch(`${API_BASE}/api/businessProfile/me`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -115,9 +115,13 @@ export default function BusinessProfile() {
           },
         });
 
+        if (res.status === 404) {
+          // No profile yet – keep empty form
+          return;
+        }
+
         if (!res.ok) {
-          if (res.status !== 404 && res.status !== 401)
-            console.error("Failed to fetch business profile:", res.status);
+          console.error("Failed to fetch business profile:", res.status);
           return;
         }
 
@@ -138,7 +142,6 @@ export default function BusinessProfile() {
           signatureOwnerTitle: data.signatureOwnerTitle ?? "",
           defaultTaxPercent: data.defaultTaxPercent ?? 18,
           notes: data.notes ?? "",
-          profileId: data._id ?? data.id ?? null,
         };
 
         setMeta(serverMeta);
@@ -157,7 +160,6 @@ export default function BusinessProfile() {
 
     return () => {
       mounted = false;
-      // revoke object URLs
       Object.values(previews).forEach((u) => {
         if (u && typeof u === "string" && u.startsWith("blob:")) {
           URL.revokeObjectURL(u);
@@ -165,7 +167,7 @@ export default function BusinessProfile() {
       });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn, userId, getToken]);
+  }, [isSignedIn, getToken]);
 
   function updateMeta(field, value) {
     setMeta((m) => ({ ...m, [field]: value }));
@@ -202,10 +204,6 @@ export default function BusinessProfile() {
 
   async function handleSave(e) {
     e?.preventDefault();
-    if (!userId) {
-      alert("User not authenticated. Please sign in.");
-      return;
-    }
     setSaving(true);
 
     try {
@@ -235,9 +233,9 @@ export default function BusinessProfile() {
       if (files.signature) fd.append("signatureNameMeta", files.signature);
       else if (meta.signatureUrl && !meta.signatureUrl.startsWith("blob:")) fd.append("signatureUrl", meta.signatureUrl);
 
-      // Use userId-based endpoint
-      const url = `${API_BASE}/api/businessProfile/${userId}`;
-      const method = meta.profileId ? "PUT" : "POST";
+      // Use the /me endpoint for both create and update
+      const url = `${API_BASE}/api/businessProfile/me`;
+      const method = "POST"; // backend should handle upsert
 
       const res = await fetch(url, {
         method,
@@ -266,7 +264,6 @@ export default function BusinessProfile() {
         signatureOwnerTitle: saved.signatureOwnerTitle ?? meta.signatureOwnerTitle,
         defaultTaxPercent: saved.defaultTaxPercent ?? meta.defaultTaxPercent,
         notes: saved.notes ?? meta.notes,
-        profileId: saved._id ?? meta.profileId ?? saved.id ?? meta.profileId,
       };
 
       setMeta(merged);
@@ -275,7 +272,7 @@ export default function BusinessProfile() {
       if (saved.stampUrl) setPreviews((p) => ({ ...p, stamp: resolveImageUrl(saved.stampUrl) }));
       if (saved.signatureUrl) setPreviews((p) => ({ ...p, signature: resolveImageUrl(saved.signatureUrl) }));
 
-      alert(`Profile ${meta.profileId ? "updated" : "created"} successfully.`);
+      alert("Profile saved successfully.");
     } catch (err) {
       console.error("Failed to save profile:", err);
       alert(err?.message || "Failed to save profile. See console for details.");
