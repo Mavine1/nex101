@@ -5,10 +5,9 @@ import GeminiIcon from "../components/GeminiIcon";
 import { useNavigate } from "react-router-dom";
 import { invoicesStyles } from "../assets/dummyStyles";
 import { useAuth } from "@clerk/clerk-react";
+import Swal from "sweetalert2";
 
-const BASE_URL = import.meta.env.VITE_API_URL;
-
-/* ---------- helpers ---------- */
+// ---------- helpers ----------
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
@@ -16,16 +15,14 @@ function resolveImageUrl(url) {
   if (/^https?:\/\//i.test(s)) {
     try {
       const parsed = new URL(s);
-      if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-        const path = parsed.pathname + (parsed.search || "") + (parsed.hash || "");
-        return `${BASE_URL.replace(/\/+$/, "")}${path}`;
-      }
+      // keep absolute URL as is (already includes correct origin)
       return parsed.href;
-    } catch (e) {
+    } catch {
       // fall through
     }
   }
-  return `${BASE_URL.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
+  // relative path → prepend with same origin
+  return s.startsWith("/") ? s : `/${s}`;
 }
 
 function normalizeInvoiceFromServer(inv = {}) {
@@ -65,17 +62,24 @@ function normalizeClient(raw) {
   return { name: "", email: "", address: "", phone: "" };
 }
 
-function formatCurrency(amount = 0, currency = "INR") {
+function formatCurrency(amount = 0, currency = "KES") {
   try {
+    if (currency === "KES") {
+      return new Intl.NumberFormat("en-KE", {
+        style: "currency",
+        currency: "KES",
+        minimumFractionDigits: 2,
+      }).format(amount);
+    }
     if (currency === "INR") {
       return new Intl.NumberFormat("en-IN", {
         style: "currency",
         currency: "INR",
       }).format(amount);
     }
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency,
+      currency: "USD",
     }).format(amount);
   } catch {
     return `${currency} ${amount}`;
@@ -92,7 +96,7 @@ function formatDate(dateInput) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-/* icons */
+/* Icons */
 const SearchIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
@@ -117,6 +121,12 @@ const EyeIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+const EditIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17 3l4 4-7 7H10v-4l7-7z" />
+    <path d="M4 20h16" />
   </svg>
 );
 const ResetIcon = ({ className = "w-4 h-4" }) => (
@@ -181,7 +191,7 @@ function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
-/* ---------- Component ---------- */
+/* ---------- Main Component ---------- */
 export default function InvoicesPage() {
   const navigate = useNavigate();
   const { getToken, isSignedIn } = useAuth();
@@ -227,7 +237,7 @@ export default function InvoicesPage() {
       const headers = { Accept: "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${BASE_URL}/api/invoice`, {
+      const res = await fetch("/api/invoice", {
         method: "GET",
         headers,
       });
@@ -334,22 +344,115 @@ export default function InvoicesPage() {
     navigate(`/app/invoices/${inv.id}/preview`, { state: { invoice: found } });
   }
 
-  async function handleDeleteInvoice(inv) {
-    if (!inv?.id) return;
-    if (!confirm(`Delete invoice ${inv.id}? This cannot be undone.`)) return;
+  function editInvoice(inv) {
+    navigate(`/app/invoices/${inv.id}/edit`, { state: { invoice: inv } });
+  }
+
+  async function updateInvoiceStatus(inv, newStatus) {
     try {
       const token = await obtainToken();
       if (!token) {
-        alert("Delete requires authentication. Please sign in.");
-        navigate("/login");
+        Swal.fire({
+          icon: "error",
+          title: "Unauthorized",
+          text: "Please sign in to update status.",
+          toast: true,
+          position: "top-end",
+        });
         return;
       }
-      const res = await fetch(`${BASE_URL}/api/invoice/${encodeURIComponent(inv.id)}`, {
+      const res = await fetch(`/api/invoice/${inv.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.message || `Update failed (${res.status})`);
+      }
+      // refresh list
+      await fetchInvoices();
+      Swal.fire({
+        icon: "success",
+        title: "Status updated",
+        text: `Invoice ${inv.id} status changed to ${newStatus}.`,
+        toast: true,
+        position: "top-end",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Update failed",
+        text: err.message,
+        confirmButtonColor: "#D0005E",
+      });
+    }
+  }
+
+  async function handleStatusClick(inv) {
+    const currentStatus = inv.status || "draft";
+    const { value: newStatus } = await Swal.fire({
+      title: "Change Invoice Status",
+      text: `Current status: ${currentStatus}`,
+      input: "select",
+      inputOptions: {
+        draft: "Draft",
+        unpaid: "Unpaid",
+        paid: "Paid",
+        overdue: "Overdue",
+      },
+      inputValue: currentStatus.toLowerCase(),
+      showCancelButton: true,
+      confirmButtonColor: "#D0005E",
+      confirmButtonText: "Update",
+      cancelButtonText: "Cancel",
+    });
+    if (newStatus && newStatus !== currentStatus.toLowerCase()) {
+      await updateInvoiceStatus(inv, newStatus);
+    }
+  }
+
+  async function handleDeleteInvoice(inv) {
+    const result = await Swal.fire({
+      title: "Delete Invoice?",
+      text: `Delete invoice ${inv.id}? This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#D0005E",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      const token = await obtainToken();
+      if (!token) {
+        Swal.fire({
+          icon: "error",
+          title: "Unauthorized",
+          text: "Please sign in to delete.",
+          toast: true,
+          position: "top-end",
+        });
+        return;
+      }
+      const res = await fetch(`/api/invoice/${encodeURIComponent(inv.id)}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
-        alert("Unauthorized. Please sign in.");
+        Swal.fire({
+          icon: "error",
+          title: "Unauthorized",
+          text: "Please sign in.",
+          confirmButtonColor: "#D0005E",
+        });
         navigate("/login");
         return;
       }
@@ -358,126 +461,121 @@ export default function InvoicesPage() {
         throw new Error(json?.message || `Delete failed (${res.status})`);
       }
       await fetchInvoices();
-      alert("Invoice deleted.");
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: `Invoice ${inv.id} has been deleted.`,
+        toast: true,
+        position: "top-end",
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (err) {
-      console.error("deleteInvoice error:", err);
-      alert(err?.message || "Failed to delete invoice.");
+      Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: err.message,
+        confirmButtonColor: "#D0005E",
+      });
     }
   }
 
   async function handleGenerateFromAI(rawText) {
     setAiLoading(true);
     try {
-      if (BASE_URL) {
-        const token = await obtainToken();
-        const aiRes = await fetch(`${BASE_URL}/api/ai/generate`, {
+      const token = await obtainToken();
+      const aiRes = await fetch("/api/ai-invoice/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ prompt: rawText }),
+      });
+
+      const bodyText = await aiRes.text().catch(() => null);
+      let bodyJson = null;
+      try {
+        bodyJson = bodyText ? JSON.parse(bodyText) : null;
+      } catch (e) {
+        bodyJson = null;
+      }
+
+      if (!aiRes.ok) {
+        const serverMessage =
+          (bodyJson && (bodyJson.message || bodyJson.detail)) ||
+          bodyText ||
+          `AI generate failed (${aiRes.status})`;
+
+        if (aiRes.status === 429 || /quota|exhausted|resource_exhausted/i.test(serverMessage)) {
+          throw new Error(`AI provider quota/exhausted: ${serverMessage}`);
+        }
+        throw new Error(serverMessage);
+      }
+
+      const aiJson = bodyJson || (await (async () => {
+        try {
+          return JSON.parse(bodyText || "");
+        } catch {
+          return null;
+        }
+      })());
+
+      const aiInvoice = aiJson?.data || aiJson;
+      if (!aiInvoice) {
+        throw new Error("AI returned no invoice data (unexpected response).");
+      }
+
+      const tokenForCreate = await obtainToken();
+      if (tokenForCreate) {
+        const createRes = await fetch("/api/invoice", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            Authorization: `Bearer ${tokenForCreate}`,
           },
-          body: JSON.stringify({ prompt: rawText }),
+          body: JSON.stringify(aiInvoice),
         });
 
-        const bodyText = await aiRes.text().catch(() => null);
-        let bodyJson = null;
-        try {
-          bodyJson = bodyText ? JSON.parse(bodyText) : null;
-        } catch (e) {
-          bodyJson = null;
-        }
-
-        if (!aiRes.ok) {
-          const serverMessage =
-            (bodyJson && (bodyJson.message || bodyJson.detail)) ||
-            bodyText ||
-            `AI generate failed (${aiRes.status})`;
-
-          if (aiRes.status === 429 || /quota|exhausted|resource_exhausted/i.test(serverMessage)) {
-            throw new Error(`AI provider quota/exhausted: ${serverMessage}`);
-          }
-          throw new Error(serverMessage);
-        }
-
-        const aiJson = bodyJson || (await (async () => {
+        if (!createRes.ok) {
+          const errText = await createRes.text().catch(() => null);
+          let errJson = null;
           try {
-            return JSON.parse(bodyText || "");
-          } catch {
-            return null;
-          }
-        })());
-
-        const aiInvoice = aiJson?.data || aiJson;
-        if (!aiInvoice) {
-          throw new Error("AI returned no invoice data (unexpected response).");
+            errJson = errText ? JSON.parse(errText) : null;
+          } catch {}
+          const errMsg =
+            (errJson && (errJson.message || errJson.detail)) ||
+            errText ||
+            `Create failed (${createRes.status})`;
+          throw new Error(errMsg);
         }
 
-        const tokenForCreate = await obtainToken();
-        if (tokenForCreate) {
-          const createRes = await fetch(`${BASE_URL}/api/invoice`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${tokenForCreate}`,
-            },
-            body: JSON.stringify(aiInvoice),
-          });
-
-          if (!createRes.ok) {
-            const errText = await createRes.text().catch(() => null);
-            let errJson = null;
-            try {
-              errJson = errText ? JSON.parse(errText) : null;
-            } catch {}
-            const errMsg =
-              (errJson && (errJson.message || errJson.detail)) ||
-              errText ||
-              `Create failed (${createRes.status})`;
-            throw new Error(errMsg);
-          }
-
-          const createJson = await createRes.json().catch(() => null);
-          const saved = normalizeInvoiceFromServer(createJson?.data || createJson);
-          await fetchInvoices();
-          setAiOpen(false);
-          navigate(`/app/invoices/${saved.id}/edit`, { state: { invoice: saved } });
-          return;
-        } else {
-          throw new Error(
-            "Creating invoice requires sign-in. Please sign in to save the AI-generated invoice."
-          );
-        }
+        const createJson = await createRes.json().catch(() => null);
+        const saved = normalizeInvoiceFromServer(createJson?.data || createJson);
+        await fetchInvoices();
+        setAiOpen(false);
+        Swal.fire({
+          icon: "success",
+          title: "Invoice Created",
+          text: `Invoice ${saved.id} has been created via AI.`,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+        });
+        navigate(`/app/invoices/${saved.id}/edit`, { state: { invoice: saved } });
+        return;
+      } else {
+        throw new Error(
+          "Creating invoice requires sign-in. Please sign in to save the AI-generated invoice."
+        );
       }
-
-      // Fallback: UI-only creation (if no BASE_URL)
-      const newId = `INV-${Math.floor(Math.random() * 900000) + 1000}`;
-      const firstLine = (rawText || "")
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .find(Boolean) || "";
-      const clientPlaceholder = firstLine.length
-        ? firstLine.length > 60
-          ? firstLine.slice(0, 57) + "..."
-          : firstLine
-        : "";
-
-      const newInvoice = {
-        id: newId,
-        invoiceNumber: newId,
-        issueDate: new Date().toISOString().slice(0, 10),
-        dueDate: "",
-        client: clientPlaceholder || "",
-        items: [],
-        currency: "INR",
-        status: "Draft",
-        notes: "",
-        taxPercent: 18,
-        aiSource: rawText,
-      };
-
-      setAllInvoices((prev) => [newInvoice, ...(prev || [])]);
-      setAiOpen(false);
-      navigate(`/app/invoices/${newId}/edit`, { state: { invoice: newInvoice } });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "AI Generation Failed",
+        text: err.message,
+        confirmButtonColor: "#D0005E",
+      });
     } finally {
       setAiLoading(false);
     }
@@ -769,7 +867,10 @@ export default function InvoicesPage() {
                       {formatCurrency(inv.amount || 0, inv.currency)}
                     </td>
                     <td className={invoicesStyles.statusCell}>
-                      <StatusBadge status={inv.status} size="default" showIcon />
+                      {/* Clickable status badge */}
+                      <div onClick={() => handleStatusClick(inv)} style={{ cursor: "pointer", display: "inline-block" }}>
+                        <StatusBadge status={inv.status} size="default" showIcon />
+                      </div>
                     </td>
                     <td className={invoicesStyles.dateCell}>{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
                     <td className={invoicesStyles.actionsCell}>
@@ -777,7 +878,9 @@ export default function InvoicesPage() {
                         <button type="button" onClick={() => openInvoice(inv)} className={invoicesStyles.viewButton}>
                           <EyeIcon className={invoicesStyles.buttonIcon} /> View
                         </button>
-
+                        <button type="button" onClick={() => editInvoice(inv)} className={invoicesStyles.viewButton}>
+                          <EditIcon className={invoicesStyles.buttonIcon} /> Edit
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteInvoice(inv)}
