@@ -178,8 +178,7 @@ const Navbar = () => {
           {/* Logo */}
           <div className={navbarStyles.logoSection}>
             <Link to="/" className={navbarStyles.logoLink}>
-              <img src={logo} alt="logo" className={navbarStyles.logoImage} />
-              <span className={navbarStyles.logoText}>InvoiceAI</span>
+              <span className={navbarStyles.logoText}>Nex101</span>
             </Link>
           </div>
 

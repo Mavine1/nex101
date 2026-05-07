@@ -15,13 +15,11 @@ function resolveImageUrl(url) {
   if (/^https?:\/\//i.test(s)) {
     try {
       const parsed = new URL(s);
-      // keep absolute URL as is (already includes correct origin)
       return parsed.href;
     } catch {
       // fall through
     }
   }
-  // relative path → prepend with same origin
   return s.startsWith("/") ? s : `/${s}`;
 }
 
@@ -184,13 +182,6 @@ function Pagination({ page, totalPages, onChange }) {
   );
 }
 
-function uid() {
-  try {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  } catch {}
-  return Math.random().toString(36).slice(2, 9);
-}
-
 /* ---------- Main Component ---------- */
 export default function InvoicesPage() {
   const navigate = useNavigate();
@@ -346,75 +337,6 @@ export default function InvoicesPage() {
 
   function editInvoice(inv) {
     navigate(`/app/invoices/${inv.id}/edit`, { state: { invoice: inv } });
-  }
-
-  async function updateInvoiceStatus(inv, newStatus) {
-    try {
-      const token = await obtainToken();
-      if (!token) {
-        Swal.fire({
-          icon: "error",
-          title: "Unauthorized",
-          text: "Please sign in to update status.",
-          toast: true,
-          position: "top-end",
-        });
-        return;
-      }
-      const res = await fetch(`/api/invoice/${inv.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.message || `Update failed (${res.status})`);
-      }
-      // refresh list
-      await fetchInvoices();
-      Swal.fire({
-        icon: "success",
-        title: "Status updated",
-        text: `Invoice ${inv.id} status changed to ${newStatus}.`,
-        toast: true,
-        position: "top-end",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-    } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Update failed",
-        text: err.message,
-        confirmButtonColor: "#D0005E",
-      });
-    }
-  }
-
-  async function handleStatusClick(inv) {
-    const currentStatus = inv.status || "draft";
-    const { value: newStatus } = await Swal.fire({
-      title: "Change Invoice Status",
-      text: `Current status: ${currentStatus}`,
-      input: "select",
-      inputOptions: {
-        draft: "Draft",
-        unpaid: "Unpaid",
-        paid: "Paid",
-        overdue: "Overdue",
-      },
-      inputValue: currentStatus.toLowerCase(),
-      showCancelButton: true,
-      confirmButtonColor: "#D0005E",
-      confirmButtonText: "Update",
-      cancelButtonText: "Cancel",
-    });
-    if (newStatus && newStatus !== currentStatus.toLowerCase()) {
-      await updateInvoiceStatus(inv, newStatus);
-    }
   }
 
   async function handleDeleteInvoice(inv) {
@@ -867,10 +789,8 @@ export default function InvoicesPage() {
                       {formatCurrency(inv.amount || 0, inv.currency)}
                     </td>
                     <td className={invoicesStyles.statusCell}>
-                      {/* Clickable status badge */}
-                      <div onClick={() => handleStatusClick(inv)} style={{ cursor: "pointer", display: "inline-block" }}>
-                        <StatusBadge status={inv.status} size="default" showIcon />
-                      </div>
+                      {/* Static status badge (non‑clickable) */}
+                      <StatusBadge status={inv.status} size="default" showIcon />
                     </td>
                     <td className={invoicesStyles.dateCell}>{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
                     <td className={invoicesStyles.actionsCell}>
