@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { invoicePreviewStyles } from "../assets/dummyStyles";
 
+// ----- helper functions -----
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
@@ -44,10 +45,10 @@ const defaultProfile = {
   website: "",
   terms: "",
   footer: "",
-  paymentMethod: "",
-  paybill: "",
-  accountNumber: "",
-  accountName: "",
+  paymentMethod: "M-PESA",
+  paybill: "247247",
+  accountNumber: "0799501465",
+  accountName: "NEX101",
   stampDataUrl: null,
   signatureDataUrl: null,
   logoDataUrl: null,
@@ -108,7 +109,7 @@ function normalizeClient(raw) {
   return { name: "", email: "", address: "", phone: "" };
 }
 
-/* icons */
+// ----- icons -----
 const PrintIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
@@ -127,6 +128,7 @@ const ArrowLeftIcon = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
+// ----- main component -----
 export default function InvoicePreview() {
   const { id } = useParams();
   const loc = useLocation();
@@ -154,6 +156,7 @@ export default function InvoicePreview() {
     }
   }, [getToken]);
 
+  // fetch invoice
   useEffect(() => {
     let mounted = true;
     async function fetchInvoice() {
@@ -201,6 +204,7 @@ export default function InvoicePreview() {
     return () => { mounted = false; };
   }, [id, invoiceFromState, obtainToken]);
 
+  // fetch business profile (and update when changed)
   useEffect(() => {
     let mounted = true;
     async function fetchProfile() {
@@ -321,7 +325,6 @@ export default function InvoicePreview() {
   const sellerLocation = invoice.fromLocation || profile.location || "";
 
   // payment details from profile
-  const paymentMethod = profile.paymentMethod || "M-PESA";
   const paybill = profile.paybill || "247247";
   const accountNumber = profile.accountNumber || "0799501465";
   const accountName = profile.accountName || "NEX101";
@@ -351,7 +354,7 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Printable invoice area (styled like the image) */}
+        {/* Printable invoice area - design matches the image */}
         <div id="print-area" className={invoicePreviewStyles.printArea} style={{ fontFamily: "sans-serif", maxWidth: "1000px", margin: "0 auto", background: "white", padding: "2rem", boxShadow: "0 0 10px rgba(0,0,0,0.05)" }}>
           {/* Header with logo and company details */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "2px solid #eee", paddingBottom: "1rem" }}>
@@ -445,32 +448,32 @@ export default function InvoicePreview() {
             </div>
           )}
 
+          {/* Signature and Stamp (only if they exist, placed side by side at the bottom) */}
+          {(signature || stamp) && (
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "2rem", marginTop: "1rem", marginBottom: "1rem", borderTop: "1px solid #eee", paddingTop: "1rem" }}>
+              {signature && (
+                <div style={{ textAlign: "center" }}>
+                  <div><strong>Authorized Signature</strong></div>
+                  <img src={signature} alt="Signature" style={{ maxHeight: "50px", maxWidth: "150px", objectFit: "contain" }} />
+                  {signatureName && <div style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>{signatureName}</div>}
+                  {signatureTitle && <div style={{ fontSize: "0.75rem", color: "#555" }}>{signatureTitle}</div>}
+                </div>
+              )}
+              {stamp && (
+                <div style={{ textAlign: "center" }}>
+                  <div><strong>Company Stamp</strong></div>
+                  <img src={stamp} alt="Stamp" style={{ maxHeight: "50px", maxWidth: "150px", objectFit: "contain" }} />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Footer (contact, website, address) */}
           <div style={{ marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "1rem", textAlign: "center", fontSize: "0.875rem", color: "#555" }}>
             <div>{sellerPhone} &nbsp;|&nbsp; {sellerEmail} &nbsp;|&nbsp; {profile.website || ""}</div>
             <div>{sellerAddress} {sellerLocation ? `, ${sellerLocation}` : ""}</div>
             {footerText && <div style={{ marginTop: "0.5rem" }}>{footerText}</div>}
           </div>
-
-          {/* Optional: signature and stamp (if needed) */}
-          {(signature || stamp) && (
-            <div style={{ marginTop: "1rem", display: "flex", justifyContent: "flex-end", gap: "2rem", fontSize: "0.875rem" }}>
-              {signature && (
-                <div style={{ textAlign: "center" }}>
-                  <div><strong>Authorized Signature</strong></div>
-                  <img src={signature} alt="Signature" style={{ maxHeight: "50px" }} />
-                  {signatureName && <div>{signatureName}</div>}
-                  {signatureTitle && <div style={{ fontSize: "0.75rem" }}>{signatureTitle}</div>}
-                </div>
-              )}
-              {stamp && (
-                <div style={{ textAlign: "center" }}>
-                  <div><strong>Company Stamp</strong></div>
-                  <img src={stamp} alt="Stamp" style={{ maxHeight: "50px" }} />
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
