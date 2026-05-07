@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { invoicePreviewStyles } from "../assets/dummyStyles";
@@ -67,7 +67,7 @@ function normalizeClient(raw) {
   };
 }
 
-// ----- icons (modern, pink accent) -----
+// ----- icons (pink accent, but not used for the invoice word) -----
 const PhoneIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -115,7 +115,7 @@ export default function InvoicePreview() {
   const { id } = useParams();
   const loc = useLocation();
   const navigate = useNavigate();
-  const { getToken, isSignedIn } = useAuth();
+  const { getToken } = useAuth();
 
   const invoiceFromState = loc?.state?.invoice ?? null;
   const [invoice, setInvoice] = useState(() => invoiceFromState || null);
@@ -254,7 +254,7 @@ export default function InvoicePreview() {
     );
   }
 
-  // Compute invoice data from invoice and profile
+  // Compute invoice data
   const items = (invoice.items || []).filter(Boolean);
   let subtotal = 0;
   items.forEach(it => { subtotal += (it.qty || 0) * (it.unitPrice || 0); });
@@ -288,7 +288,7 @@ export default function InvoicePreview() {
   const PINK = "#c0005a";
   const LIGHT_PINK = "#f5e6ee";
 
-  // Inline styles for the invoice card (matching the picture)
+  // Inline styles – updated per request
   const styles = {
     page: {
       fontFamily: "'Segoe UI', Arial, sans-serif",
@@ -413,17 +413,20 @@ export default function InvoicePreview() {
       marginBottom: "4px",
       display: "flex",
       alignItems: "center",
-      gap: "10px",
+      gap: "8px",
     },
+    termsLine: { width: "40px", height: "1px", background: "#bbb", flexShrink: 0 }, // reduced line
     termsText: { fontSize: "0.82rem", color: "#444", lineHeight: 1.6, maxWidth: "55%" },
     thankYouRow: {
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "flex-end",
+      alignItems: "center",
       padding: "8px 32px 16px 32px",
     },
     thankYou: { color: PINK, fontWeight: "700", fontSize: "0.95rem", fontStyle: "italic" },
+    signatureStampContainer: { display: "flex", alignItems: "center", gap: "24px" },
     signatureBlock: { textAlign: "center", minWidth: "150px" },
+    stampBlock: { textAlign: "center" },
     signatureLine: { borderTop: "1.5px solid #333", paddingTop: "6px", marginTop: "4px" },
     signatureNameText: { fontWeight: "700", fontSize: "0.86rem", color: "#111", textTransform: "uppercase" },
     signatureTitleText: { fontSize: "0.76rem", color: "#555" },
@@ -468,11 +471,11 @@ export default function InvoicePreview() {
         <div id="print-area" style={styles.page}>
           <div style={styles.topWhiteSpace} />
 
-          {/* Header with trapezium SVG */}
+          {/* Header with single trapezium (no red/pink overlay) */}
           <div style={styles.topBar}>
             <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }} viewBox="0 0 794 76" preserveAspectRatio="none">
+              {/* Single dark trapezium */}
               <polygon points="340,0 794,0 794,76 290,76" fill={DARK} />
-              <polygon points="580,0 680,0 650,76 550,76" fill={PINK} />
               <rect x="774" y="0" width="20" height="76" fill="#1a0015" />
             </svg>
             <div style={styles.topBarLeft}>
@@ -589,29 +592,29 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* Terms & Conditions */}
+          {/* Terms & Conditions (with reduced line) */}
           {terms && (
             <div style={styles.termsSection}>
               <div style={styles.termsTitle}>
                 <span>TERMS &amp; CONDITIONS</span>
-                <span style={{ flex: 1, height: "1px", background: "#bbb", marginLeft: "10px" }} />
+                <div style={styles.termsLine} />
               </div>
               <div style={styles.termsText}>{terms}</div>
             </div>
           )}
 
-          {/* Thank you + Signature + Stamp */}
+          {/* Thank you + Signature + Stamp (aligned on same line) */}
           <div style={styles.thankYouRow}>
             <div style={styles.thankYou}>{footer}</div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: "24px" }}>
+            <div style={styles.signatureStampContainer}>
               {stamp && (
-                <div style={{ textAlign: "center" }}>
-                  <img src={stamp} alt="Stamp" style={{ maxHeight: "60px", maxWidth: "60px", objectFit: "contain" }} />
+                <div style={styles.stampBlock}>
+                  <img src={stamp} alt="Stamp" style={{ maxHeight: "50px", maxWidth: "50px", objectFit: "contain" }} />
                 </div>
               )}
               <div style={styles.signatureBlock}>
                 {signature && (
-                  <img src={signature} alt="Signature" style={{ maxHeight: "36px", maxWidth: "130px", objectFit: "contain", marginBottom: "4px" }} />
+                  <img src={signature} alt="Signature" style={{ maxHeight: "32px", maxWidth: "120px", objectFit: "contain", marginBottom: "4px" }} />
                 )}
                 <div style={styles.signatureLine}>
                   <div style={styles.signatureNameText}>{signatureName || "AUTHORIZED SIGNATORY"}</div>
