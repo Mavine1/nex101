@@ -3,14 +3,14 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import Swal from "sweetalert2";
 import StatusBadge from "../components/StatusBadge";
-import GeminiIcon from "../components/GeminiIcon"; // <-- import GeminiIcon
+import GeminiIcon from "../components/GeminiIcon";
 import {
   createInvoiceStyles,
   createInvoiceIconColors,
 } from "../assets/dummyStyles";
-import { invoicesStyles } from "../assets/dummyStyles"; // <-- for AI button style
+import { invoicesStyles } from "../assets/dummyStyles";
 
-// Injected inline CSS for the AI modal (tiny)
+// Injected inline CSS for the AI modal
 const injectAIModalStyles = () => {
   if (document.getElementById("ai-modal-styles")) return;
   const style = document.createElement("style");
@@ -503,8 +503,6 @@ export default function CreateInvoice() {
     navigate(`/app/invoices/${invoice.id}/preview`, { state: { invoice: prepared } });
   }
 
-  const totals = computeTotals(items, invoice?.taxPercent ?? 16);
-
   if (loading && isEditing) {
     return <div className="p-6">Loading invoice...</div>;
   }
@@ -521,7 +519,7 @@ export default function CreateInvoice() {
           <button
             type="button"
             onClick={() => setAiModalOpen(true)}
-            className={invoicesStyles.aiButton}   // <-- using invoicesStyles for consistency
+            className={invoicesStyles.aiButton}
           >
             <GeminiIcon className="w-6 h-6 group-hover:scale-110 transition-transform flex-none" />
             Create with AI
@@ -600,132 +598,130 @@ export default function CreateInvoice() {
         </div>
       </div>
 
-      {/* Single Column – Bill To + Items (full width, no right column summary) */}
-      <div className={createInvoiceStyles.mainGrid}>
-        <div className={createInvoiceStyles.leftColumn}>
-          {/* Bill To */}
-          <div className={createInvoiceStyles.cardContainer}>
-            <div className={createInvoiceStyles.cardHeaderContainer}>
-              <div className={`${createInvoiceStyles.cardIconContainer} ${createInvoiceIconColors.billTo}`}>
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </div>
-              <h3 className={createInvoiceStyles.cardTitle}>Bill To</h3>
+      {/* Full‑width layout – no right column */}
+      <div className="space-y-8">
+        {/* Bill To */}
+        <div className={createInvoiceStyles.cardContainer}>
+          <div className={createInvoiceStyles.cardHeaderContainer}>
+            <div className={`${createInvoiceStyles.cardIconContainer} ${createInvoiceIconColors.billTo}`}>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             </div>
-            <div className={createInvoiceStyles.gridCols2}>
-              <div>
-                <label className={createInvoiceStyles.label}>Client Name</label>
-                <input
-                  value={invoice?.client?.name || ""}
-                  onChange={(e) => updateClient("name", e.target.value)}
-                  placeholder="Client Name"
-                  className={createInvoiceStyles.input}
-                />
-              </div>
-              <div>
-                <label className={createInvoiceStyles.label}>Client Email</label>
-                <input
-                  value={invoice?.client?.email || ""}
-                  onChange={(e) => updateClient("email", e.target.value)}
-                  placeholder="client@email.com"
-                  className={createInvoiceStyles.input}
-                />
-              </div>
-              <div className={createInvoiceStyles.gridColSpan2}>
-                <label className={createInvoiceStyles.label}>Client Address</label>
-                <textarea
-                  value={invoice?.client?.address || ""}
-                  onChange={(e) => updateClient("address", e.target.value)}
-                  placeholder="Client Address"
-                  rows={3}
-                  className={createInvoiceStyles.textarea}
-                />
-              </div>
-              <div>
-                <label className={createInvoiceStyles.label}>Client Phone</label>
-                <input
-                  value={invoice?.client?.phone || ""}
-                  onChange={(e) => updateClient("phone", e.target.value)}
-                  placeholder="+254 700 123456"
-                  className={createInvoiceStyles.input}
-                />
-              </div>
+            <h3 className={createInvoiceStyles.cardTitle}>Bill To</h3>
+          </div>
+          <div className={createInvoiceStyles.gridCols2}>
+            <div>
+              <label className={createInvoiceStyles.label}>Client Name</label>
+              <input
+                value={invoice?.client?.name || ""}
+                onChange={(e) => updateClient("name", e.target.value)}
+                placeholder="Client Name"
+                className={createInvoiceStyles.input}
+              />
+            </div>
+            <div>
+              <label className={createInvoiceStyles.label}>Client Email</label>
+              <input
+                value={invoice?.client?.email || ""}
+                onChange={(e) => updateClient("email", e.target.value)}
+                placeholder="client@email.com"
+                className={createInvoiceStyles.input}
+              />
+            </div>
+            <div className={createInvoiceStyles.gridColSpan2}>
+              <label className={createInvoiceStyles.label}>Client Address</label>
+              <textarea
+                value={invoice?.client?.address || ""}
+                onChange={(e) => updateClient("address", e.target.value)}
+                placeholder="Client Address"
+                rows={3}
+                className={createInvoiceStyles.textarea}
+              />
+            </div>
+            <div>
+              <label className={createInvoiceStyles.label}>Client Phone</label>
+              <input
+                value={invoice?.client?.phone || ""}
+                onChange={(e) => updateClient("phone", e.target.value)}
+                placeholder="+254 700 123456"
+                className={createInvoiceStyles.input}
+              />
             </div>
           </div>
+        </div>
 
-          {/* Items */}
-          <div className={createInvoiceStyles.cardContainer}>
-            <div className={createInvoiceStyles.cardHeaderWithButton}>
-              <div className={createInvoiceStyles.cardHeaderLeft}>
-                <div className={createInvoiceStyles.cardIconContainer}>
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <line x1="8" y1="12" x2="16" y2="12" />
-                    <line x1="12" y1="8" x2="12" y2="16" />
-                  </svg>
-                </div>
-                <h3 className={createInvoiceStyles.cardTitle}>Items & Services</h3>
+        {/* Items – full width */}
+        <div className={createInvoiceStyles.cardContainer}>
+          <div className={createInvoiceStyles.cardHeaderWithButton}>
+            <div className={createInvoiceStyles.cardHeaderLeft}>
+              <div className={createInvoiceStyles.cardIconContainer}>
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                  <line x1="12" y1="8" x2="12" y2="16" />
+                </svg>
               </div>
-              <div className={createInvoiceStyles.currencyBadge}>All amounts in {invoice.currency}</div>
+              <h3 className={createInvoiceStyles.cardTitle}>Items & Services</h3>
             </div>
+            <div className={createInvoiceStyles.currencyBadge}>All amounts in {invoice.currency}</div>
+          </div>
 
-            <div className={createInvoiceStyles.itemsListWrapper}>
-              {items.map((it, idx) => {
-                const totalValue = Number(it?.qty || 0) * Number(it?.unitPrice || 0);
-                return (
-                  <div key={it?.id ?? idx} className={`${createInvoiceStyles.itemsTableRow} ${createInvoiceStyles.itemRow}`}>
-                    <div className={createInvoiceStyles.itemColDescription}>
-                      <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`desc-${idx}`}>Description</label>
-                      <input
-                        id={`desc-${idx}`}
-                        className={createInvoiceStyles.itemsInput}
-                        value={it?.description ?? ""}
-                        onChange={(e) => updateItem(idx, "description", e.target.value)}
-                        placeholder="Item description"
-                      />
-                    </div>
-                    <div className={createInvoiceStyles.itemColQuantity}>
-                      <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`qty-${idx}`}>Quantity</label>
-                      <input
-                        id={`qty-${idx}`}
-                        type="text"
-                        inputMode="numeric"
-                        className={createInvoiceStyles.itemsNumberInput}
-                        value={String(it?.qty ?? "")}
-                        onChange={(e) => updateItem(idx, "qty", e.target.value)}
-                      />
-                    </div>
-                    <div className={createInvoiceStyles.itemColUnitPrice}>
-                      <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`price-${idx}`}>Unit Price</label>
-                      <input
-                        id={`price-${idx}`}
-                        type="text"
-                        inputMode="decimal"
-                        className={createInvoiceStyles.itemsNumberInput}
-                        value={String(it?.unitPrice ?? "")}
-                        onChange={(e) => updateItem(idx, "unitPrice", e.target.value)}
-                      />
-                    </div>
-                    <div className={createInvoiceStyles.itemColTotal}>
-                      <label className={createInvoiceStyles.itemsFieldLabel}>Total</label>
-                      <div className={createInvoiceStyles.itemsTotal}>{currencyFmt(totalValue, invoice.currency)}</div>
-                    </div>
-                    <div className={createInvoiceStyles.itemColRemove}>
-                      <button type="button" onClick={() => removeItem(idx)} className={createInvoiceStyles.itemsRemoveButton}>
-                        <DeleteIcon className="w-4 h-4" />
-                      </button>
-                    </div>
+          <div className={createInvoiceStyles.itemsListWrapper}>
+            {items.map((it, idx) => {
+              const totalValue = Number(it?.qty || 0) * Number(it?.unitPrice || 0);
+              return (
+                <div key={it?.id ?? idx} className={`${createInvoiceStyles.itemsTableRow} ${createInvoiceStyles.itemRow}`}>
+                  <div className={createInvoiceStyles.itemColDescription}>
+                    <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`desc-${idx}`}>Description</label>
+                    <input
+                      id={`desc-${idx}`}
+                      className={createInvoiceStyles.itemsInput}
+                      value={it?.description ?? ""}
+                      onChange={(e) => updateItem(idx, "description", e.target.value)}
+                      placeholder="Item description"
+                    />
                   </div>
-                );
-              })}
-            </div>
-            <div className="mt-6">
-              <button onClick={addItem} className={createInvoiceStyles.addItemButton}>
-                <AddIcon className="w-4 h-4" /> Add Item
-              </button>
-            </div>
+                  <div className={createInvoiceStyles.itemColQuantity}>
+                    <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`qty-${idx}`}>Quantity</label>
+                    <input
+                      id={`qty-${idx}`}
+                      type="text"
+                      inputMode="numeric"
+                      className={createInvoiceStyles.itemsNumberInput}
+                      value={String(it?.qty ?? "")}
+                      onChange={(e) => updateItem(idx, "qty", e.target.value)}
+                    />
+                  </div>
+                  <div className={createInvoiceStyles.itemColUnitPrice}>
+                    <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`price-${idx}`}>Unit Price</label>
+                    <input
+                      id={`price-${idx}`}
+                      type="text"
+                      inputMode="decimal"
+                      className={createInvoiceStyles.itemsNumberInput}
+                      value={String(it?.unitPrice ?? "")}
+                      onChange={(e) => updateItem(idx, "unitPrice", e.target.value)}
+                    />
+                  </div>
+                  <div className={createInvoiceStyles.itemColTotal}>
+                    <label className={createInvoiceStyles.itemsFieldLabel}>Total</label>
+                    <div className={createInvoiceStyles.itemsTotal}>{currencyFmt(totalValue, invoice.currency)}</div>
+                  </div>
+                  <div className={createInvoiceStyles.itemColRemove}>
+                    <button type="button" onClick={() => removeItem(idx)} className={createInvoiceStyles.itemsRemoveButton}>
+                      <DeleteIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-6">
+            <button onClick={addItem} className={createInvoiceStyles.addItemButton}>
+              <AddIcon className="w-4 h-4" /> Add Item
+            </button>
           </div>
         </div>
       </div>
