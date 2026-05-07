@@ -3,29 +3,28 @@ import mongoose from "mongoose";
 const businessProfileSchema = new mongoose.Schema({
     owner: { type: String, required: true, index: true },
     businessName: { type: String, required: true },
-    email: { type: String, required: false, trim: true, lowercase: true, default: "" },
-    address: { type: String, required: false, default: "" },
-    phone: { type: String, required: false, default: "" },
-    location: { type: String, required: false, default: "" },      // Replaces GST/Tax ID
+    email: { type: String, default: "", trim: true, lowercase: true },
+    address: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    location: { type: String, default: "" },      // Replaces GST/Tax ID
     
-    // for images
-    logoUrl: { type: String, required: false, default: null },
-    stampUrl: { type: String, required: false, default: null },
-    signatureUrl: { type: String, required: false, default: null },
+    // images
+    logoUrl: { type: String, default: null },
+    stampUrl: { type: String, default: null },
+    signatureUrl: { type: String, default: null },
     
-    signatureOwnerName: { type: String, required: false, default: "" },
-    signatureOwnerTitle: { type: String, required: false, default: "" },
+    signatureOwnerName: { type: String, default: "" },
+    signatureOwnerTitle: { type: String, default: "" },
     
-    defaultTaxPercent: { type: Number, required: false, default: 18 },
+    defaultTaxPercent: { type: Number, default: 18 },
 
     // New fields
-    website: { type: String, required: false, default: "" },        // Business website URL
-    terms: { type: String, required: false, default: "" },          // Terms & conditions text
-    footer: { type: String, required: false, default: "" },         // Custom footer text
+    website: { type: String, default: "" },
+    terms: { type: String, default: "" },
+    footer: { type: String, default: "" }
 }, {
     timestamps: true
 });
 
 const BusinessProfile = mongoose.models.BusinessProfile || mongoose.model("BusinessProfile", businessProfileSchema);
-
 export default BusinessProfile;
