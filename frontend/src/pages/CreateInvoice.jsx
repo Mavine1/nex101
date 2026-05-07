@@ -729,7 +729,7 @@ export default function CreateInvoice() {
       {/* Save button at the bottom */}
       <div className="flex justify-end mt-6">
         <button onClick={handleSave} disabled={loading} className={createInvoiceStyles.saveButton}>
-          <SaveIcon className="w-4 h-4" /> {loading ? "Saving..." : (isEditing ? "Update Invoice" : "Create Invoice")}
+          <SaveIcon className="w-4 h-4" /> {loading ? "Saving..." : (isEditing ? "Update Invoice" : "Save Invoice")}
         </button>
       </div>
 
