@@ -4,9 +4,36 @@ import { useAuth } from "@clerk/clerk-react";
 import { dashboardStyles } from "../assets/dummyStyles";
 import KpiCard from '../components/KpiCard';
 
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== "undefined" ? window.location.origin : "");
+// ---------- Injected CSS for dashboard enhancements ----------
+const injectDashboardStyles = () => {
+  if (document.getElementById("dashboard-inline-styles")) return;
+  const style = document.createElement("style");
+  style.id = "dashboard-inline-styles";
+  style.innerHTML = `
+    /* Smooth row hover transition */
+    .dashboard-table-row {
+      transition: all 0.2s ease;
+    }
+    .dashboard-table-row:hover {
+      background-color: rgba(208, 0, 94, 0.05);
+      transform: scale(1.01);
+    }
+    /* Quick action buttons custom animation */
+    .quick-action-btn {
+      transition: all 0.2s ease;
+    }
+    .quick-action-btn:hover {
+      transform: translateX(4px);
+    }
+    /* KPI card value styling */
+    .kpi-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
 const HARD_RATES = { USD_TO_KES: 130 };
 
 // ---------- Currency formatter for Kenyan Shilling ----------
@@ -117,12 +144,17 @@ const StatusBadge = ({ status, size = "default", showIcon = true }) => {
 // ======================== MAIN DASHBOARD COMPONENT ========================
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { getToken, userId, isSignedIn } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
 
   const [storedInvoices, setStoredInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [businessProfile, setBusinessProfile] = useState(null);
+
+  // Inject custom styles once
+  useEffect(() => {
+    injectDashboardStyles();
+  }, []);
 
   const obtainToken = useCallback(async () => {
     if (typeof getToken !== "function") return null;
@@ -147,7 +179,8 @@ const Dashboard = () => {
       const headers = { Accept: "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/api/invoice`, {
+      // Use relative URL (proxy will forward to backend)
+      const res = await fetch("/api/invoice", {
         method: "GET",
         headers,
       });
@@ -191,11 +224,12 @@ const Dashboard = () => {
   }, [isSignedIn, obtainToken]);
 
   const fetchBusinessProfile = useCallback(async () => {
-    if (!isSignedIn || !userId) return;
+    if (!isSignedIn) return;
     try {
       const token = await obtainToken();
       if (!token) return;
-      const res = await fetch(`${API_BASE}/api/businessProfile/${userId}`, {
+      // Use the correct /me endpoint (no hardcoded userId)
+      const res = await fetch("/api/businessProfile/me", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -210,7 +244,7 @@ const Dashboard = () => {
     } catch (err) {
       console.warn("Failed to fetch business profile:", err);
     }
-  }, [isSignedIn, userId, obtainToken]);
+  }, [isSignedIn, obtainToken]);
 
   useEffect(() => {
     if (isSignedIn) {
@@ -368,7 +402,7 @@ const Dashboard = () => {
               <div className={dashboardStyles.quickActionsContainer}>
                 <button
                   onClick={() => navigate("/app/create-invoice")}
-                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionBlue}`}
+                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionBlue} quick-action-btn`}
                 >
                   <div className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconBlue}`}>
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -380,7 +414,7 @@ const Dashboard = () => {
 
                 <button
                   onClick={() => navigate("/app/invoices")}
-                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
+                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray} quick-action-btn`}
                 >
                   <div className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}>
                     <FileTextIcon className="w-4 h-4" />
@@ -390,7 +424,7 @@ const Dashboard = () => {
 
                 <button
                   onClick={() => navigate("/app/business")}
-                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray}`}
+                  className={`${dashboardStyles.quickActionButton} ${dashboardStyles.quickActionGray} quick-action-btn`}
                 >
                   <div className={`${dashboardStyles.quickActionIconContainer} ${dashboardStyles.quickActionIconGray}`}>
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -440,11 +474,15 @@ const Dashboard = () => {
                     <th className={dashboardStyles.tableHeaderCell}>Status</th>
                     <th className={dashboardStyles.tableHeaderCell}>Due Date</th>
                     <th className={dashboardStyles.tableHeaderCell}>Actions</th>
-                   </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {recent.map((inv) => (
-                    <tr key={inv.id} className={dashboardStyles.tableRow} onClick={() => openInvoice(inv)}>
+                    <tr
+                      key={inv.id}
+                      className={`${dashboardStyles.tableRow} dashboard-table-row`}
+                      onClick={() => openInvoice(inv)}
+                    >
                       <td className={dashboardStyles.tableCell}>
                         <div className="flex items-center gap-3">
                           <div className={dashboardStyles.clientAvatar}>{getClientInitial(inv)}</div>
