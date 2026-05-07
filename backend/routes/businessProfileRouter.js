@@ -39,7 +39,7 @@ businessProfileRouter.post(
     { name: "stampName", maxCount: 1 },
     { name: "signatureNameMeta", maxCount: 1 },
   ]),
-  createBusinessProfile   // controller should handle "create or update" logic
+  createBusinessProfile   // controller now does upsert with location, website, terms, footer
 );
 
 // PUT - update by ID (optional, kept for backward compatibility)
@@ -50,7 +50,7 @@ businessProfileRouter.put(
     { name: "stampName", maxCount: 1 },
     { name: "signatureNameMeta", maxCount: 1 },
   ]),
-  updateBusinessProfile
+  updateBusinessProfile   // ensure this controller also handles new fields
 );
 
 export default businessProfileRouter;
