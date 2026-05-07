@@ -25,7 +25,7 @@ function resolveImageUrl(url) {
         // rewrite localhost -> API_BASE
         const path =
           parsed.pathname + (parsed.search || "") + (parsed.hash || "");
-        return `${API_BASE.replace(/\/+$/, "")}${path}`;
+        return `${BASE_URL.replace(/\/+$/, "")}${path}`;
       }
       return parsed.href;
     } catch (e) {
@@ -34,7 +34,7 @@ function resolveImageUrl(url) {
   }
 
   // relative paths like "/uploads/..." or "uploads/..." -> prefix with API_BASE
-  return `${API_BASE.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
+  return `${BASE_URL.replace(/\/+$/, "")}/${s.replace(/^\/+/, "")}`;
 }
 
 function normalizeInvoiceFromServer(inv = {}) {

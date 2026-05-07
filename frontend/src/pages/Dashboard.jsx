@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { dashboardStyles } from "../assets/dummyStyles";
 import KpiCard from '../components/KpiCard'; // Ensure KpiCard.jsx is using Tailwind (as provided earlier)
 
-const API_BASE = "http://localhost:4000";
+const BASE_URL = import.meta.env.VITE_API_URL;
 const HARD_RATES = { USD_TO_KES: 130 }; // Example rate: 1 USD = 130 KES
 
 // ---------- Currency formatter for Kenyan Shilling ----------
