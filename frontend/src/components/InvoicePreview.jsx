@@ -18,45 +18,6 @@ function resolveImageUrl(url) {
   return s.startsWith("/") ? s : `/${s}`;
 }
 
-function readJSON(key, fallback = null) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
-function writeJSON(key, val) {
-  try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch {}
-}
-function getStoredInvoices() {
-  return readJSON("invoices_v1", []) || [];
-}
-
-const defaultProfile = {
-  businessName: "",
-  email: "",
-  address: "",
-  phone: "",
-  location: "",
-  website: "",
-  terms: "",
-  footer: "",
-  paymentMethod: "M-PESA",
-  paybill: "247247",
-  accountNumber: "0799501465",
-  accountName: "NEX101",
-  stampDataUrl: null,
-  signatureDataUrl: null,
-  logoDataUrl: null,
-  defaultTaxPercent: 18,
-  signatureName: "",
-  signatureTitle: "",
-};
-
 function currencyFmt(amount = 0, currency = "KES") {
   try {
     if (currency === "KES") {
@@ -77,40 +38,60 @@ function currencyFmt(amount = 0, currency = "KES") {
 
 function formatDate(dateInput) {
   if (!dateInput) return "—";
-  const d = dateInput instanceof Date ? dateInput : new Date(String(dateInput));
-  if (Number.isNaN(d.getTime())) return "—";
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return "—";
   const day = d.getDate();
   const month = d.toLocaleString("default", { month: "long" });
   const year = d.getFullYear();
-  return `${day}${getOrdinal(day)} ${month} ${year}`;
-}
-
-function getOrdinal(n) {
-  if (n > 3 && n < 21) return "th";
-  switch (n % 10) {
-    case 1: return "st";
-    case 2: return "nd";
-    case 3: return "rd";
-    default: return "th";
-  }
+  const suffix = day => {
+    if (day > 3 && day < 21) return "th";
+    switch (day % 10) {
+      case 1: return "st";
+      case 2: return "nd";
+      case 3: return "rd";
+      default: return "th";
+    }
+  };
+  return `${day}${suffix(day)} ${month} ${year}`;
 }
 
 function normalizeClient(raw) {
-  if (!raw) return { name: "", email: "", address: "", phone: "" };
-  if (typeof raw === "string") return { name: raw, email: "", address: "", phone: "" };
-  if (typeof raw === "object") {
-    return {
-      name: raw.name ?? raw.company ?? raw.client ?? "",
-      email: raw.email ?? "",
-      address: raw.address ?? "",
-      phone: raw.phone ?? "",
-      company: raw.company ?? "",
-    };
-  }
-  return { name: "", email: "", address: "", phone: "" };
+  if (!raw) return { name: "", email: "", address: "", phone: "", company: "" };
+  if (typeof raw === "string") return { name: raw, email: "", address: "", phone: "", company: "" };
+  return {
+    name: raw.name || raw.company || raw.client || "",
+    email: raw.email || "",
+    address: raw.address || "",
+    phone: raw.phone || "",
+    company: raw.company || "",
+  };
 }
 
-// ----- icons -----
+// ----- icons (modern, pink accent) -----
+const PhoneIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
+const EmailIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
+  </svg>
+);
+const WebIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10A15.3 15.3 0 0 1 8 12a15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+const LocationIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
 const PrintIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
@@ -129,36 +110,6 @@ const ArrowLeftIcon = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-// Phone icon for footer
-const PhoneCircleIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M8.5 3.5s-1 2-1 4c0 5.5 4.5 10 10 10 2 0 4-1 4-1" />
-    <path d="M8.91 10.45a10.18 10.18 0 0 0 4.64 4.64l1.55-1.55a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C9.61 21 3 14.39 3 6.27a1 1 0 0 1 1-1H7.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02z" />
-  </svg>
-);
-const EmailCircleIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M4 8l8 5 8-5" />
-    <rect x="4" y="8" width="16" height="10" rx="1" />
-  </svg>
-);
-const WebCircleIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
-    <circle cx="12" cy="12" r="10" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10A15.3 15.3 0 0 1 8 12a15.3 15.3 0 0 1 4-10z" />
-  </svg>
-);
-const LocationCircleIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2" style={{ verticalAlign: "middle" }}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" />
-    <path d="M12 17s-5-4.686-5-8a5 5 0 0 1 10 0c0 3.314-5 8-5 8z" />
-  </svg>
-);
-
 // ----- main component -----
 export default function InvoicePreview() {
   const { id } = useParams();
@@ -167,14 +118,12 @@ export default function InvoicePreview() {
   const { getToken, isSignedIn } = useAuth();
 
   const invoiceFromState = loc?.state?.invoice ?? null;
-  const [invoice, setInvoice] = useState(() => invoiceFromState ? invoiceFromState : null);
+  const [invoice, setInvoice] = useState(() => invoiceFromState || null);
   const [loadingInvoice, setLoadingInvoice] = useState(!invoiceFromState && Boolean(id));
   const [invoiceError, setInvoiceError] = useState(null);
 
-  const [profile, setProfile] = useState(() => readJSON("business_profile", defaultProfile) || defaultProfile);
-  const [profileLoading, setProfileLoading] = useState(false);
-
-  const prevTitleRef = useRef(document.title);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const obtainToken = useCallback(async () => {
     if (typeof getToken !== "function") return null;
@@ -187,6 +136,7 @@ export default function InvoicePreview() {
     }
   }, [getToken]);
 
+  // Fetch invoice if not passed via state
   useEffect(() => {
     let mounted = true;
     async function fetchInvoice() {
@@ -199,10 +149,10 @@ export default function InvoicePreview() {
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`/api/invoice/${id}`, { method: "GET", headers });
         if (res.ok) {
-          const json = await res.json().catch(() => null);
-          const data = json?.data ?? json ?? null;
+          const json = await res.json();
+          const data = json?.data ?? json;
           if (mounted && data) {
-            const normalized = {
+            setInvoice({
               ...data,
               id: data._id ?? data.id ?? id,
               items: Array.isArray(data.items) ? data.items : [],
@@ -211,26 +161,23 @@ export default function InvoicePreview() {
               issueDate: data.issueDate,
               dueDate: data.dueDate,
               client: data.client,
-            };
-            setInvoice(normalized);
-            return;
+            });
           }
+        } else if (res.status === 404) {
+          setInvoiceError("Invoice not found");
         }
       } catch (err) {
         console.warn("Error fetching invoice:", err);
+        setInvoiceError("Failed to load invoice");
       } finally {
-        if (!mounted) return;
-        const all = getStoredInvoices();
-        const found = all.find(x => x && (x.id === id || x._id === id || x.invoiceNumber === id));
-        if (found) setInvoice(found);
-        else setInvoiceError("Invoice not found");
-        setLoadingInvoice(false);
+        if (mounted) setLoadingInvoice(false);
       }
     }
     fetchInvoice();
     return () => { mounted = false; };
   }, [id, invoiceFromState, obtainToken]);
 
+  // Fetch business profile
   useEffect(() => {
     let mounted = true;
     async function fetchProfile() {
@@ -240,32 +187,30 @@ export default function InvoicePreview() {
         const headers = { Accept: "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch("/api/businessProfile/me", { method: "GET", headers });
-        if (!res.ok) { setProfileLoading(false); return; }
-        const json = await res.json().catch(() => null);
-        const data = json?.data ?? json ?? null;
-        if (mounted && data && typeof data === "object") {
-          const normalized = {
-            businessName: data.businessName ?? "",
-            email: data.email ?? "",
-            address: data.address ?? "",
-            phone: data.phone ?? "",
-            location: data.location ?? "",
-            website: data.website ?? "",
-            terms: data.terms ?? "",
-            footer: data.footer ?? "",
-            paymentMethod: data.paymentMethod ?? "M-PESA",
-            paybill: data.paybill ?? "247247",
-            accountNumber: data.accountNumber ?? "0799501465",
-            accountName: data.accountName ?? "NEX101",
-            stampDataUrl: data.stampUrl ?? data.stampDataUrl ?? null,
-            signatureDataUrl: data.signatureUrl ?? data.signatureDataUrl ?? null,
-            logoDataUrl: data.logoUrl ?? data.logoDataUrl ?? null,
-            defaultTaxPercent: Number.isFinite(Number(data.defaultTaxPercent)) ? Number(data.defaultTaxPercent) : 18,
-            signatureName: data.signatureOwnerName ?? data.signatureName ?? "",
-            signatureTitle: data.signatureOwnerTitle ?? data.signatureTitle ?? "",
-          };
-          setProfile(normalized);
-          writeJSON("business_profile", normalized);
+        if (res.ok) {
+          const json = await res.json();
+          const data = json?.data ?? json;
+          if (mounted && data) {
+            setProfile({
+              businessName: data.businessName || "",
+              email: data.email || "",
+              address: data.address || "",
+              phone: data.phone || "",
+              location: data.location || "",
+              website: data.website || "",
+              terms: data.terms || "",
+              footer: data.footer || "",
+              paybill: data.paybill || "247247",
+              accountNumber: data.accountNumber || "0799501465",
+              accountName: data.accountName || "NEX101",
+              stampDataUrl: data.stampUrl ?? data.stampDataUrl ?? null,
+              signatureDataUrl: data.signatureUrl ?? data.signatureDataUrl ?? null,
+              logoDataUrl: data.logoUrl ?? data.logoDataUrl ?? null,
+              defaultTaxPercent: Number(data.defaultTaxPercent) || 18,
+              signatureName: data.signatureOwnerName || data.signatureName || "",
+              signatureTitle: data.signatureOwnerTitle || data.signatureTitle || "",
+            });
+          }
         }
       } catch (err) {
         console.warn("Error fetching profile:", err);
@@ -273,33 +218,18 @@ export default function InvoicePreview() {
         if (mounted) setProfileLoading(false);
       }
     }
-    const stored = readJSON("business_profile", null);
-    if (!stored) fetchProfile();
+    fetchProfile();
     return () => { mounted = false; };
   }, [obtainToken]);
 
-  useEffect(() => {
-    if (!invoice) return;
-    const invoiceNumber = invoice.invoiceNumber || invoice.id || `invoice-${Date.now()}`;
-    const safe = `Invoice-${String(invoiceNumber).replace(/[^\w\-_.() ]/g, "_")}`;
-    const prev = prevTitleRef.current ?? document.title;
-    if (document.title !== safe) document.title = safe;
-    return () => { try { document.title = prev; } catch {} };
-  }, [invoice]);
-
   const handlePrint = useCallback(() => {
-    const invoiceNumber = (invoice && (invoice.invoiceNumber || invoice.id)) || `invoice-${Date.now()}`;
-    const safe = `Invoice-${String(invoiceNumber).replace(/[^\w\-_.() ]/g, "_")}`;
-    const prevTitle = document.title;
-    document.title = safe;
     window.print();
-    setTimeout(() => { document.title = prevTitle; }, 500);
-  }, [invoice]);
+  }, []);
 
-  if (!invoice && (loadingInvoice || profileLoading)) {
+  if (loadingInvoice || profileLoading) {
     return <div className="p-6">Loading…</div>;
   }
-  if (!invoice) {
+  if (!invoice || invoiceError) {
     return (
       <div className={invoicePreviewStyles.pageContainer}>
         <div className={invoicePreviewStyles.emptyStateContainer}>
@@ -312,7 +242,7 @@ export default function InvoicePreview() {
               </svg>
             </div>
             <h3 className={invoicePreviewStyles.emptyStateTitle}>Invoice Not Found</h3>
-            <p className={invoicePreviewStyles.emptyStateMessage}>The invoice you're looking for doesn't exist or may have been deleted.</p>
+            <p className={invoicePreviewStyles.emptyStateMessage}>{invoiceError || "The invoice you're looking for doesn't exist."}</p>
             <div className="mt-6">
               <button onClick={() => navigate(-1)} className={invoicePreviewStyles.emptyStateButton}>
                 <ArrowLeftIcon className="w-4 h-4" /> Back to Invoices
@@ -324,40 +254,42 @@ export default function InvoicePreview() {
     );
   }
 
-  const items = (invoice.items && Array.isArray(invoice.items) ? invoice.items : []).filter(Boolean);
+  // Compute invoice data from invoice and profile
+  const items = (invoice.items || []).filter(Boolean);
   let subtotal = 0;
-  items.forEach(it => { subtotal += Number(it.qty || 0) * Number(it.unitPrice || 0); });
-  const taxPercent = Number(invoice.taxPercent ?? profile.defaultTaxPercent ?? 18);
+  items.forEach(it => { subtotal += (it.qty || 0) * (it.unitPrice || 0); });
+  const taxPercent = invoice.taxPercent ?? profile?.defaultTaxPercent ?? 18;
   const tax = (subtotal * taxPercent) / 100;
   const total = subtotal + tax;
 
-  const logo = resolveImageUrl(invoice.logoDataUrl ?? profile.logoDataUrl ?? null);
-  const stamp = resolveImageUrl(invoice.stampDataUrl ?? profile.stampDataUrl ?? null);
-  const signature = resolveImageUrl(invoice.signatureDataUrl ?? profile.signatureDataUrl ?? null);
-  const signatureName = invoice.signatureName ?? profile.signatureName ?? "";
-  const signatureTitle = invoice.signatureTitle ?? profile.signatureTitle ?? "";
+  const logo = resolveImageUrl(invoice.logoDataUrl ?? profile?.logoDataUrl ?? null);
+  const stamp = resolveImageUrl(invoice.stampDataUrl ?? profile?.stampDataUrl ?? null);
+  const signature = resolveImageUrl(invoice.signatureDataUrl ?? profile?.signatureDataUrl ?? null);
+  const signatureName = invoice.signatureName ?? profile?.signatureName ?? "";
+  const signatureTitle = invoice.signatureTitle ?? profile?.signatureTitle ?? "";
   const client = normalizeClient(invoice.client);
-  const invoiceCurrency = invoice.currency || "KES";
+  const currency = invoice.currency || "KES";
 
-  const sellerAddress = invoice.fromAddress || profile.address || "";
-  const sellerEmail = invoice.fromEmail || profile.email || "";
-  const sellerPhone = invoice.fromPhone || profile.phone || "";
-  const sellerLocation = invoice.fromLocation || profile.location || "";
-  const sellerWebsite = profile.website || "";
+  const sellerName = invoice.fromBusinessName || profile?.businessName || "";
+  const sellerAddress = invoice.fromAddress || profile?.address || "";
+  const sellerEmail = invoice.fromEmail || profile?.email || "";
+  const sellerPhone = invoice.fromPhone || profile?.phone || "";
+  const sellerLocation = invoice.fromLocation || profile?.location || "";
+  const sellerWebsite = profile?.website || "";
 
-  const paybill = profile.paybill || "247247";
-  const accountNumber = profile.accountNumber || "0799501465";
-  const accountName = profile.accountName || "NEX101";
-  const terms = invoice.terms || profile.terms || "";
-  const footerText = invoice.footer || profile.footer || "";
+  const paybill = profile?.paybill || "247247";
+  const accountNumber = profile?.accountNumber || "0799501465";
+  const accountName = profile?.accountName || "NEX101";
+  const terms = invoice.terms || profile?.terms || "";
+  const footer = invoice.footer || profile?.footer || "Thank you for your business!";
 
   // Colors
   const DARK = "#3b0030";
   const PINK = "#c0005a";
   const LIGHT_PINK = "#f5e6ee";
 
-  // Inline styles object for the invoice
-  const s = {
+  // Inline styles for the invoice card (matching the picture)
+  const styles = {
     page: {
       fontFamily: "'Segoe UI', Arial, sans-serif",
       maxWidth: "860px",
@@ -366,12 +298,7 @@ export default function InvoicePreview() {
       boxShadow: "0 2px 24px rgba(0,0,0,0.10)",
       overflow: "hidden",
     },
-    // Top white space above header
-    topWhiteSpace: {
-      height: "18px",
-      background: "white",
-    },
-    // Top header bar: logo left, layered diagonal banner right
+    topWhiteSpace: { height: "18px", background: "white" },
     topBar: {
       display: "flex",
       alignItems: "stretch",
@@ -387,7 +314,6 @@ export default function InvoicePreview() {
       background: "white",
       zIndex: 2,
     },
-    // The right side is rendered as an SVG overlay for precise layered shapes
     topBarRight: {
       position: "relative",
       minWidth: "300px",
@@ -404,20 +330,10 @@ export default function InvoicePreview() {
       letterSpacing: "0.14em",
       textTransform: "uppercase",
       lineHeight: 1,
-      position: "relative",
       zIndex: 3,
     },
-    // Thin pink line under header
-    pinkDivider: {
-      height: "3px",
-      background: PINK,
-      width: "100%",
-    },
-    // Body padding
-    body: {
-      padding: "24px 32px 0 32px",
-    },
-    // Client & invoice info row
+    pinkDivider: { height: "3px", background: PINK, width: "100%" },
+    body: { padding: "24px 32px 0 32px" },
     infoRow: {
       display: "flex",
       justifyContent: "space-between",
@@ -425,33 +341,12 @@ export default function InvoicePreview() {
       marginBottom: "22px",
       gap: "16px",
     },
-    clientBlock: {
-      flex: 1,
-    },
-    invoiceTo: {
-      fontSize: "0.85rem",
-      color: "#555",
-      marginBottom: "2px",
-    },
-    clientName: {
-      color: PINK,
-      fontWeight: "700",
-      fontSize: "1.05rem",
-      textTransform: "uppercase",
-      letterSpacing: "0.02em",
-    },
-    clientCompany: {
-      color: "#222",
-      fontSize: "0.92rem",
-    },
-    clientPhone: {
-      color: "#444",
-      fontSize: "0.88rem",
-    },
-    invoiceMetaBlock: {
-      textAlign: "right",
-      minWidth: "200px",
-    },
+    clientBlock: { flex: 1 },
+    invoiceTo: { fontSize: "0.85rem", color: "#555", marginBottom: "2px" },
+    clientName: { color: PINK, fontWeight: "700", fontSize: "1.05rem", textTransform: "uppercase" },
+    clientCompany: { color: "#222", fontSize: "0.92rem" },
+    clientPhone: { color: "#444", fontSize: "0.88rem" },
+    invoiceMetaBlock: { textAlign: "right", minWidth: "200px" },
     invoiceNoBadge: {
       background: DARK,
       color: "white",
@@ -462,72 +357,17 @@ export default function InvoicePreview() {
       marginBottom: "6px",
       letterSpacing: "0.04em",
     },
-    invoiceDateRow: {
-      fontSize: "0.9rem",
-      color: "#222",
-    },
-    invoiceDateVal: {
-      color: PINK,
-      fontWeight: "700",
-    },
-    // Items table
-    table: {
-      width: "100%",
-      borderCollapse: "collapse",
-      marginBottom: "0",
-    },
-    thead: {
-      background: PINK,
-    },
-    th: {
-      color: "white",
-      fontWeight: "700",
-      fontSize: "0.78rem",
-      padding: "10px 12px",
-      textAlign: "left",
-      letterSpacing: "0.06em",
-      textTransform: "uppercase",
-    },
-    thRight: {
-      color: "white",
-      fontWeight: "700",
-      fontSize: "0.78rem",
-      padding: "10px 12px",
-      textAlign: "right",
-      letterSpacing: "0.06em",
-      textTransform: "uppercase",
-    },
-    tdEven: {
-      padding: "10px 12px",
-      fontSize: "0.88rem",
-      color: "#222",
-      background: "white",
-      borderBottom: "1px solid #e8d0dc",
-      borderTop: "1px solid #e8d0dc",
-    },
-    tdOdd: {
-      padding: "10px 12px",
-      fontSize: "0.88rem",
-      color: "#222",
-      background: LIGHT_PINK,
-      borderBottom: "1px solid #e8d0dc",
-      borderTop: "1px solid #e8d0dc",
-    },
-    tdRight: {
-      textAlign: "right",
-    },
-    tdBold: {
-      fontWeight: "600",
-    },
-    // Last row shaded
-    lastRow: {
-      background: LIGHT_PINK,
-    },
-    tableSection: {
-      overflowX: "auto",
-      marginBottom: "0",
-    },
-    // Payment + totals row
+    invoiceDateRow: { fontSize: "0.9rem", color: "#222" },
+    invoiceDateVal: { color: PINK, fontWeight: "700" },
+    tableSection: { overflowX: "auto", marginBottom: "0" },
+    table: { width: "100%", borderCollapse: "collapse" },
+    thead: { background: PINK },
+    th: { color: "white", fontWeight: "700", fontSize: "0.78rem", padding: "10px 12px", textAlign: "left", textTransform: "uppercase" },
+    thRight: { textAlign: "right" },
+    tdEven: { padding: "10px 12px", fontSize: "0.88rem", color: "#222", background: "white", borderBottom: "1px solid #e8d0dc" },
+    tdOdd: { padding: "10px 12px", fontSize: "0.88rem", color: "#222", background: LIGHT_PINK, borderBottom: "1px solid #e8d0dc" },
+    tdRight: { textAlign: "right" },
+    tdBold: { fontWeight: "600" },
     bottomSection: {
       display: "flex",
       justifyContent: "space-between",
@@ -535,9 +375,7 @@ export default function InvoicePreview() {
       padding: "20px 32px",
       gap: "24px",
     },
-    paymentBlock: {
-      flex: 1,
-    },
+    paymentBlock: { flex: 1 },
     paymentBadge: {
       background: PINK,
       color: "white",
@@ -546,38 +384,13 @@ export default function InvoicePreview() {
       padding: "5px 14px",
       display: "inline-block",
       marginBottom: "10px",
-      letterSpacing: "0.08em",
       textTransform: "uppercase",
     },
-    paymentRow: {
-      display: "flex",
-      gap: "8px",
-      fontSize: "0.88rem",
-      color: "#222",
-      marginBottom: "2px",
-    },
-    paymentLabel: {
-      color: "#555",
-      minWidth: "90px",
-      fontWeight: "500",
-    },
-    paymentVal: {
-      fontWeight: "700",
-      color: "#111",
-    },
-    totalsBlock: {
-      minWidth: "220px",
-      textAlign: "right",
-    },
-    totalsRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      gap: "24px",
-      fontSize: "0.9rem",
-      color: "#444",
-      marginBottom: "4px",
-      paddingBottom: "4px",
-    },
+    paymentRow: { display: "flex", gap: "8px", fontSize: "0.88rem", color: "#222", marginBottom: "2px" },
+    paymentLabel: { color: "#555", minWidth: "90px", fontWeight: "500" },
+    paymentVal: { fontWeight: "700", color: "#111" },
+    totalsBlock: { minWidth: "220px", textAlign: "right" },
+    totalsRow: { display: "flex", justifyContent: "space-between", gap: "24px", fontSize: "0.9rem", color: "#444", marginBottom: "4px" },
     totalsRowBold: {
       display: "flex",
       justifyContent: "space-between",
@@ -590,17 +403,7 @@ export default function InvoicePreview() {
       fontSize: "1rem",
       marginTop: "4px",
     },
-    totalsLabel: {
-      fontWeight: "500",
-      letterSpacing: "0.04em",
-    },
-    totalsVal: {
-      fontWeight: "700",
-    },
-    // Terms
-    termsSection: {
-      padding: "0 32px 16px 32px",
-    },
+    termsSection: { padding: "0 32px 16px 32px" },
     termsTitle: {
       color: DARK,
       fontWeight: "800",
@@ -612,59 +415,20 @@ export default function InvoicePreview() {
       alignItems: "center",
       gap: "10px",
     },
-    termsDivider: {
-      flex: 1,
-      height: "1px",
-      background: "#ccc",
-      display: "inline-block",
-    },
-    termsText: {
-      fontSize: "0.82rem",
-      color: "#444",
-      lineHeight: 1.6,
-    },
-    // Thank you & signature row
+    termsText: { fontSize: "0.82rem", color: "#444", lineHeight: 1.6, maxWidth: "55%" },
     thankYouRow: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "flex-end",
       padding: "8px 32px 16px 32px",
     },
-    thankYou: {
-      color: PINK,
-      fontWeight: "700",
-      fontSize: "0.95rem",
-      fontStyle: "italic",
-    },
-    signatureBlock: {
-      textAlign: "center",
-      minWidth: "160px",
-    },
-    signatureLine: {
-      borderTop: "1.5px solid #333",
-      paddingTop: "6px",
-      marginTop: "4px",
-    },
-    signatureNameText: {
-      fontWeight: "700",
-      fontSize: "0.88rem",
-      color: "#111",
-      textTransform: "uppercase",
-      letterSpacing: "0.03em",
-    },
-    signatureTitleText: {
-      fontSize: "0.78rem",
-      color: "#555",
-    },
-    // Footer bar
-    footerDivider: {
-      height: "2px",
-      background: PINK,
-      margin: "0 32px",
-    },
-    footer: {
-      padding: "14px 32px 10px 32px",
-    },
+    thankYou: { color: PINK, fontWeight: "700", fontSize: "0.95rem", fontStyle: "italic" },
+    signatureBlock: { textAlign: "center", minWidth: "150px" },
+    signatureLine: { borderTop: "1.5px solid #333", paddingTop: "6px", marginTop: "4px" },
+    signatureNameText: { fontWeight: "700", fontSize: "0.86rem", color: "#111", textTransform: "uppercase" },
+    signatureTitleText: { fontSize: "0.76rem", color: "#555" },
+    footerDivider: { height: "2px", background: PINK, margin: "0 32px" },
+    footer: { padding: "14px 32px 10px 32px" },
     footerRow: {
       display: "flex",
       alignItems: "center",
@@ -674,30 +438,15 @@ export default function InvoicePreview() {
       marginBottom: "5px",
       flexWrap: "wrap",
     },
-    footerItem: {
-      display: "flex",
-      alignItems: "center",
-      gap: "7px",
-      marginRight: "20px",
-    },
-    // Dark corner accent bottom-right
-    cornerAccent: {
-      display: "flex",
-      justifyContent: "flex-end",
-    },
-    cornerTriangle: {
-      width: "80px",
-      height: "22px",
-      background: DARK,
-      clipPath: "polygon(100% 0%, 100% 100%, 0% 100%)",
-    },
+    footerItem: { display: "flex", alignItems: "center", gap: "7px", marginRight: "20px" },
+    cornerAccent: { display: "flex", justifyContent: "flex-end" },
+    cornerTriangle: { width: "80px", height: "22px", background: DARK, clipPath: "polygon(100% 0%, 100% 100%, 0% 100%)" },
   };
 
-  // Only real invoice items — no padding
   return (
     <div className={invoicePreviewStyles.pageContainer}>
       <div className={invoicePreviewStyles.container}>
-        {/* Header Actions (no-print) */}
+        {/* Print / Edit header (no-print) */}
         <div className={`${invoicePreviewStyles.headerContainer} ${invoicePreviewStyles.noPrint}`}>
           <div>
             <h1 className={invoicePreviewStyles.headerTitle}>Invoice Preview</h1>
@@ -715,103 +464,90 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* ===================== PRINTABLE INVOICE ===================== */}
-        <div id="print-area" style={s.page}>
+        {/* Printable invoice card */}
+        <div id="print-area" style={styles.page}>
+          <div style={styles.topWhiteSpace} />
 
-          {/* White space on top */}
-          <div style={s.topWhiteSpace} />
-
-          {/* TOP HEADER: Logo left + trapezium INVOICE shape right */}
-          <div style={s.topBar}>
-            <svg
-              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }}
-              viewBox="0 0 794 76"
-              preserveAspectRatio="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Dark maroon trapezium: wider at bottom, narrower at top — classic trapezoid */}
+          {/* Header with trapezium SVG */}
+          <div style={styles.topBar}>
+            <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }} viewBox="0 0 794 76" preserveAspectRatio="none">
               <polygon points="340,0 794,0 794,76 290,76" fill={DARK} />
-              {/* Pink accent trapezium: overlapping on the right side of the dark shape */}
               <polygon points="580,0 680,0 650,76 550,76" fill={PINK} />
-              {/* Small dark bar at far right edge */}
               <rect x="774" y="0" width="20" height="76" fill="#1a0015" />
             </svg>
-
-            <div style={s.topBarLeft}>
-              {logo
-                ? <img src={logo} alt="Logo" style={{ maxHeight: "56px", maxWidth: "180px", objectFit: "contain" }} />
-                : (
-                  <div style={{ fontWeight: "900", fontSize: "1.3rem", color: DARK, letterSpacing: "0.04em" }}>
-                    {invoice.fromBusinessName || profile.businessName || "YOUR COMPANY"}
-                  </div>
-                )
-              }
+            <div style={styles.topBarLeft}>
+              {logo ? (
+                <img src={logo} alt="Logo" style={{ maxHeight: "56px", maxWidth: "180px", objectFit: "contain" }} />
+              ) : (
+                <div style={{ fontWeight: "900", fontSize: "1.3rem", color: DARK, letterSpacing: "0.04em" }}>
+                  {sellerName || "YOUR COMPANY"}
+                </div>
+              )}
             </div>
-            <div style={s.topBarRight}>
-              <span style={s.invoiceTitle}>INVOICE</span>
+            <div style={styles.topBarRight}>
+              <span style={styles.invoiceTitle}>INVOICE</span>
             </div>
           </div>
+          <div style={styles.pinkDivider} />
 
-          {/* Pink divider line */}
-          <div style={s.pinkDivider} />
-
-          {/* BODY */}
-          <div style={s.body}>
-            {/* Client info + Invoice number/date */}
-            <div style={s.infoRow}>
-              <div style={s.clientBlock}>
-                <div style={s.invoiceTo}>Invoice to:</div>
-                <div style={s.clientName}>{client.name || "CLIENT'S NAME"}</div>
-                {client.company && <div style={s.clientCompany}>{client.company}</div>}
-                <div style={s.clientPhone}>Tel: {client.phone || "071234567890"}</div>
+          {/* Client & Invoice Info */}
+          <div style={styles.body}>
+            <div style={styles.infoRow}>
+              <div style={styles.clientBlock}>
+                <div style={styles.invoiceTo}>Invoice to:</div>
+                <div style={styles.clientName}>{client.name || "CLIENT'S NAME"}</div>
+                {client.company && <div style={styles.clientCompany}>{client.company}</div>}
+                <div style={styles.clientPhone}>Tel: {client.phone || "071234567890"}</div>
               </div>
-              <div style={s.invoiceMetaBlock}>
-                <div style={s.invoiceNoBadge}>
+              <div style={styles.invoiceMetaBlock}>
+                <div style={styles.invoiceNoBadge}>
                   INVOICE NO.: {invoice.invoiceNumber || invoice.id || "00001"}
                 </div>
                 {invoice.issueDate && (
-                  <div style={s.invoiceDateRow}>
-                    Invoice Date: <span style={s.invoiceDateVal}>{formatDate(invoice.issueDate)}</span>
+                  <div style={styles.invoiceDateRow}>
+                    Invoice Date: <span style={styles.invoiceDateVal}>{formatDate(invoice.issueDate)}</span>
                   </div>
                 )}
                 {invoice.dueDate && (
-                  <div style={{ ...s.invoiceDateRow, marginTop: "3px" }}>
-                    Due Date: <span style={s.invoiceDateVal}>{formatDate(invoice.dueDate)}</span>
+                  <div style={{ ...styles.invoiceDateRow, marginTop: "3px" }}>
+                    Due Date: <span style={styles.invoiceDateVal}>{formatDate(invoice.dueDate)}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* ITEMS TABLE */}
-          <div style={s.tableSection}>
-            <table style={s.table}>
-              <thead style={s.thead}>
+          {/* Items Table (striped) */}
+          <div style={styles.tableSection}>
+            <table style={styles.table}>
+              <thead style={styles.thead}>
                 <tr>
-                  <th style={{ ...s.th, width: "46px" }}>NO</th>
-                  <th style={s.th}>PRODUCT/SERVICE DESCRIPTION</th>
-                  <th style={{ ...s.thRight, width: "70px" }}>QTY</th>
-                  <th style={{ ...s.thRight, width: "130px" }}>UNIT PRICE ({invoiceCurrency})</th>
-                  <th style={{ ...s.thRight, width: "130px" }}>TOTAL PRICE ({invoiceCurrency})</th>
+                  <th style={{ ...styles.th, width: "46px" }}>NO</th>
+                  <th style={styles.th}>PRODUCT/SERVICE DESCRIPTION</th>
+                  <th style={{ ...styles.th, ...styles.thRight, width: "70px" }}>QTY</th>
+                  <th style={{ ...styles.th, ...styles.thRight, width: "130px" }}>UNIT PRICE ({currency})</th>
+                  <th style={{ ...styles.th, ...styles.thRight, width: "130px" }}>TOTAL PRICE ({currency})</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{ ...s.tdEven, textAlign: "center", color: "#999", padding: "20px" }}>
+                    <td colSpan="5" style={{ ...styles.tdEven, textAlign: "center", color: "#999", padding: "20px" }}>
                       No items added to this invoice.
                     </td>
                   </tr>
                 ) : (
                   items.map((it, idx) => {
-                    const tdStyle = idx % 2 === 0 ? s.tdEven : s.tdOdd;
+                    const rowStyle = idx % 2 === 0 ? styles.tdEven : styles.tdOdd;
                     return (
                       <tr key={it.id || idx}>
-                        <td style={tdStyle}>{idx + 1}</td>
-                        <td style={tdStyle}>{it.description || "—"}</td>
-                        <td style={{ ...tdStyle, ...s.tdCenter }}>{it.qty || 0}</td>
-                        <td style={{ ...tdStyle, ...s.tdRight }}>{currencyFmt(it.unitPrice || 0, invoiceCurrency)}</td>
-                        <td style={{ ...tdStyle, ...s.tdRight, ...s.tdBold }}>{currencyFmt(Number(it.qty || 0) * Number(it.unitPrice || 0), invoiceCurrency)}</td>
+                        <td style={rowStyle}>{idx + 1}</td>
+                        <td style={rowStyle}>{it.description || "—"}</td>
+                        <td style={{ ...rowStyle, ...styles.tdRight }}>{it.qty || 0}</td>
+                        <td style={{ ...rowStyle, ...styles.tdRight }}>{currencyFmt(it.unitPrice || 0, currency)}</td>
+                        <td style={{ ...rowStyle, ...styles.tdRight, ...styles.tdBold }}>
+                          {currencyFmt((it.qty || 0) * (it.unitPrice || 0), currency)}
+                        </td>
                       </tr>
                     );
                   })
@@ -820,125 +556,103 @@ export default function InvoicePreview() {
             </table>
           </div>
 
-          {/* PAYMENT + TOTALS */}
-          <div style={s.bottomSection}>
-            <div style={s.paymentBlock}>
-              <div style={s.paymentBadge}>PAYMENT METHOD</div>
-              <div style={s.paymentRow}>
-                <span style={s.paymentLabel}>PAYBILL:</span>
-                <span style={s.paymentVal}>{paybill}</span>
+          {/* Payment Method & Totals */}
+          <div style={styles.bottomSection}>
+            <div style={styles.paymentBlock}>
+              <div style={styles.paymentBadge}>PAYMENT METHOD</div>
+              <div style={styles.paymentRow}>
+                <span style={styles.paymentLabel}>PAYBILL:</span>
+                <span style={styles.paymentVal}>{paybill}</span>
               </div>
-              <div style={s.paymentRow}>
-                <span style={s.paymentLabel}>ACC. NO.:</span>
-                <span style={s.paymentVal}>{accountNumber}</span>
+              <div style={styles.paymentRow}>
+                <span style={styles.paymentLabel}>ACC. NO.:</span>
+                <span style={styles.paymentVal}>{accountNumber}</span>
               </div>
-              <div style={s.paymentRow}>
-                <span style={s.paymentLabel}>ACC. NAME:</span>
-                <span style={s.paymentVal}>{accountName}</span>
+              <div style={styles.paymentRow}>
+                <span style={styles.paymentLabel}>ACC. NAME:</span>
+                <span style={styles.paymentVal}>{accountName}</span>
               </div>
             </div>
-
-            <div style={s.totalsBlock}>
-              <div style={s.totalsRow}>
-                <span style={s.totalsLabel}>SUB TOTAL</span>
-                <span style={s.totalsVal}>{currencyFmt(subtotal, invoiceCurrency)}</span>
+            <div style={styles.totalsBlock}>
+              <div style={styles.totalsRow}>
+                <span>SUB TOTAL</span>
+                <span>{currencyFmt(subtotal, currency)}</span>
               </div>
-              <div style={s.totalsRow}>
-                <span style={s.totalsLabel}>TAX ({taxPercent}%)</span>
-                <span style={s.totalsVal}>{currencyFmt(tax, invoiceCurrency)}</span>
+              <div style={styles.totalsRow}>
+                <span>TAX ({taxPercent}%)</span>
+                <span>{currencyFmt(tax, currency)}</span>
               </div>
-              <div style={s.totalsRowBold}>
+              <div style={styles.totalsRowBold}>
                 <span>GRAND TOTAL</span>
-                <span>{currencyFmt(total, invoiceCurrency)}</span>
+                <span>{currencyFmt(total, currency)}</span>
               </div>
             </div>
           </div>
 
-          {/* TERMS & CONDITIONS */}
-          <div style={s.termsSection}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "5px" }}>
-              <span style={{ color: DARK, fontWeight: "800", fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
-                TERMS &amp; CONDITIONS
-              </span>
-              <span style={{ width: "80px", height: "1px", background: "#bbb", display: "inline-block", flexShrink: 0 }} />
+          {/* Terms & Conditions */}
+          {terms && (
+            <div style={styles.termsSection}>
+              <div style={styles.termsTitle}>
+                <span>TERMS &amp; CONDITIONS</span>
+                <span style={{ flex: 1, height: "1px", background: "#bbb", marginLeft: "10px" }} />
+              </div>
+              <div style={styles.termsText}>{terms}</div>
             </div>
-            <div style={{ ...s.termsText, maxWidth: "55%" }}>
-              {terms || "Deposit payable is 70% of the total cost of the project. All Payment must be cleared after completion and approval of the project."}
-            </div>
-          </div>
+          )}
 
-          {/* THANK YOU + SIGNATURE + STAMP */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "8px 32px 16px 32px" }}>
-            <div style={{ color: PINK, fontWeight: "700", fontSize: "0.9rem", fontStyle: "italic" }}>
-              {footerText || "Thank you for your business!"}
-            </div>
+          {/* Thank you + Signature + Stamp */}
+          <div style={styles.thankYouRow}>
+            <div style={styles.thankYou}>{footer}</div>
             <div style={{ display: "flex", alignItems: "flex-end", gap: "24px" }}>
-              {/* Stamp — shown beside signature if present */}
               {stamp && (
                 <div style={{ textAlign: "center" }}>
-                  <img src={stamp} alt="Stamp" style={{ maxHeight: "60px", maxWidth: "60px", objectFit: "contain", display: "block", margin: "0 auto" }} />
+                  <img src={stamp} alt="Stamp" style={{ maxHeight: "60px", maxWidth: "60px", objectFit: "contain" }} />
                 </div>
               )}
-              {/* Signature block */}
-              <div style={{ textAlign: "center", minWidth: "150px" }}>
+              <div style={styles.signatureBlock}>
                 {signature && (
-                  <img src={signature} alt="Signature" style={{ maxHeight: "36px", maxWidth: "130px", objectFit: "contain", display: "block", margin: "0 auto 4px" }} />
+                  <img src={signature} alt="Signature" style={{ maxHeight: "36px", maxWidth: "130px", objectFit: "contain", marginBottom: "4px" }} />
                 )}
-                <div style={{ borderTop: "1.5px solid #333", paddingTop: "4px" }}>
-                  <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "#111", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                    {signatureName || "AUTHORIZED SIGNATORY"}
-                  </div>
-                  {signatureTitle && (
-                    <div style={{ fontSize: "0.76rem", color: "#555" }}>{signatureTitle}</div>
-                  )}
+                <div style={styles.signatureLine}>
+                  <div style={styles.signatureNameText}>{signatureName || "AUTHORIZED SIGNATORY"}</div>
+                  {signatureTitle && <div style={styles.signatureTitleText}>{signatureTitle}</div>}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* FOOTER DIVIDER */}
-          <div style={s.footerDivider} />
-
-          {/* FOOTER CONTACT ROW */}
-          <div style={s.footer}>
-            <div style={s.footerRow}>
+          {/* Footer */}
+          <div style={styles.footerDivider} />
+          <div style={styles.footer}>
+            <div style={styles.footerRow}>
               {sellerPhone && (
-                <div style={s.footerItem}>
-                  <PhoneCircleIcon />
-                  <span>{sellerPhone}</span>
+                <div style={styles.footerItem}>
+                  <PhoneIcon /> <span>{sellerPhone}</span>
                 </div>
               )}
               {sellerEmail && (
-                <div style={s.footerItem}>
-                  <EmailCircleIcon />
-                  <span>{sellerEmail}</span>
+                <div style={styles.footerItem}>
+                  <EmailIcon /> <span>{sellerEmail}</span>
                 </div>
               )}
               {sellerWebsite && (
-                <div style={s.footerItem}>
-                  <WebCircleIcon />
-                  <span>{sellerWebsite}</span>
+                <div style={styles.footerItem}>
+                  <WebIcon /> <span>{sellerWebsite}</span>
                 </div>
               )}
             </div>
             {(sellerAddress || sellerLocation) && (
-              <div style={s.footerRow}>
-                <div style={s.footerItem}>
-                  <LocationCircleIcon />
-                  <span>{[sellerAddress, sellerLocation].filter(Boolean).join(" ")}</span>
+              <div style={styles.footerRow}>
+                <div style={styles.footerItem}>
+                  <LocationIcon /> <span>{[sellerAddress, sellerLocation].filter(Boolean).join(", ")}</span>
                 </div>
               </div>
             )}
           </div>
-
-          {/* Bottom dark corner accent */}
-          <div style={s.cornerAccent}>
-            <div style={s.cornerTriangle} />
+          <div style={styles.cornerAccent}>
+            <div style={styles.cornerTriangle} />
           </div>
-
         </div>
-        {/* ===================== END PRINTABLE INVOICE ===================== */}
-
       </div>
     </div>
   );
