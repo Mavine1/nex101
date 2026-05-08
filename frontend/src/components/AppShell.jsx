@@ -178,12 +178,10 @@ const AppShell = () => {
             <div className={`${appShellStyles.logoContainer} ${collapsed ? appShellStyles.logoContainerCollapsed : ""}`}>
               <NavLink to="/app/dashboard" className={appShellStyles.logoLink}>
                 <div className="relative">
-                  <img src={logo} alt="logo" className={appShellStyles.logoImage} />
-                  <div className="absolute inset-0 rounded-lg blur-sm group-hover:blur-md transition-all duration-300" />
                 </div>
                 {!collapsed && (
                   <div className={appShellStyles.logoTextContainer}>
-                    <span className={appShellStyles.logoText}>InvoiceAI</span>
+                    <span className={appShellStyles.logoText}>Nex101</span>
                     <div className={appShellStyles.logoUnderline} />
                   </div>
                 )}
