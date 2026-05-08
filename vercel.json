@@ -15,11 +15,11 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/:path*",
       "destination": "/backend/server.js"
     },
     {
-      "source": "/(.*)",
+      "source": "/:path((?!assets|static|favicon\\.ico|robots\\.txt).*)",
       "destination": "/frontend/index.html"
     }
   ]
