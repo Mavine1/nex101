@@ -1,8 +1,23 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { footerStyles } from "../assets/dummyStyles";
 
 const Footer = () => {
-  // Simple SVG icons (using Heroicons-style)
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Track scroll position to show/hide back-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Social media icons (Heroicons style)
   const TwitterIcon = () => (
     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
       <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
@@ -29,19 +44,85 @@ const Footer = () => {
 
   return (
     <footer className={footerStyles.footer}>
+      {/* Decorative gradient line */}
+      <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent mb-6" />
+
       <div className={footerStyles.container}>
-        <div className={footerStyles.copyright}>
-          © 2026 NEX101 Ltd. All rights reserved.
-        </div>
-        <div className={footerStyles.links}>
-          <a href="/terms" className={footerStyles.link}>
-            Terms
-          </a>
-          <a href="/privacy" className={footerStyles.link}>
-            Privacy
-          </a>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
+          {/* Left side: copyright + tagline */}
+          <div className="text-center md:text-left">
+            <div className={footerStyles.copyright}>
+              © 2026 NEX101 Ltd. All rights reserved.
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Simplify your invoicing with AI.
+            </div>
+          </div>
+
+          {/* Middle: social media icons */}
+          <div className="flex gap-4 items-center">
+            <a
+              href="https://twitter.com/nex101hub"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-[#1DA1F2] transition-all duration-300 transform hover:scale-110"
+              aria-label="Twitter"
+            >
+              <TwitterIcon />
+            </a>
+            <a
+              href="https://linkedin.com/company/nex101hub"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-[#0077B5] transition-all duration-300 transform hover:scale-110"
+              aria-label="LinkedIn"
+            >
+              <LinkedInIcon />
+            </a>
+            <a
+              href="https://instagram.com/nex101hub"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-[#E4405F] transition-all duration-300 transform hover:scale-110"
+              aria-label="Instagram"
+            >
+              <InstagramIcon />
+            </a>
+            <a
+              href="https://tiktok.com/@nex101hub"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-[#010101] transition-all duration-300 transform hover:scale-110"
+              aria-label="TikTok"
+            >
+              <TikTokIcon />
+            </a>
+          </div>
+
+          {/* Right side: legal links */}
+          <div className={footerStyles.links}>
+            <a href="/terms" className={footerStyles.link}>
+              Terms
+            </a>
+            <a href="/privacy" className={footerStyles.link}>
+              Privacy
+            </a>
+          </div>
         </div>
       </div>
+
+      {/* Back to top button (visible on scroll) */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 bg-[#c0005a] text-white p-3 rounded-full shadow-lg hover:bg-[#a00048] transition-all duration-300 hover:scale-110 z-50 focus:outline-none"
+          aria-label="Back to top"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
+      )}
     </footer>
   );
 };
