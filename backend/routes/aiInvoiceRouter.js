@@ -12,11 +12,10 @@ if (!API_KEY) {
 
 // Use only models that are known to work with free tier (gemini-1.5-flash is safest)
 const MODEL_CANDIDATES = [
-    Gemini 2.5 Flash,   // Latest and best, but may have stricter quota
-    Gemini 2.5,         // Very capable, may be more available
-    Gemini 1.5 Flash,   // Known to work with free tier, good fallback
-    Gemini 1.5          // Older, less capable, but may still work as a last resort
-    // fallback (may be restricted)
+  "gemini-2.5-flash",   // Latest and best, but may have stricter quota
+  "gemini-2.5",         // Very capable, may be more available
+  "gemini-1.5-flash",   // Known to work with free tier, good fallback
+  "gemini-1.5",         // Older, less capable, but may still work as a last resort
 ];
 
 let ai = null;
