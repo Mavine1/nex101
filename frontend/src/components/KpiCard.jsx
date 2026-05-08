@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 // ======================== ICONS ========================
 const RevenueIcon = ({ className = "w-5 h-5" }) => (
@@ -30,9 +30,97 @@ const MetricIcons = {
   default: InvoiceIcon,
 };
 
+// Helper: convert currency (KES, USD) to number for calculations
+const convertToKES = (amount, currency) => {
+  if (!currency || currency === "KES") return amount;
+  if (currency === "USD") return amount * 130; // example rate
+  return amount;
+};
+
+// Helper: compute invoice statistics from an array
+const computeStats = (invoices) => {
+  if (!invoices || !invoices.length) {
+    return {
+      totalCount: 0,
+      totalAmount: 0,
+      paidAmount: 0,
+      unpaidAmount: 0,
+      paidCount: 0,
+      unpaidCount: 0,
+    };
+  }
+  let totalAmount = 0;
+  let paidAmount = 0;
+  let unpaidAmount = 0;
+  let paidCount = 0;
+  let unpaidCount = 0;
+
+  invoices.forEach(inv => {
+    const amount = inv.total || inv.amount || 0;
+    const currency = inv.currency || "KES";
+    const amountInKES = convertToKES(amount, currency);
+    totalAmount += amountInKES;
+    if (inv.status?.toLowerCase() === "paid") {
+      paidAmount += amountInKES;
+      paidCount++;
+    } else if (inv.status?.toLowerCase() === "unpaid" || inv.status?.toLowerCase() === "overdue") {
+      unpaidAmount += amountInKES;
+      unpaidCount++;
+    }
+  });
+  return {
+    totalCount: invoices.length,
+    totalAmount,
+    paidAmount,
+    unpaidAmount,
+    paidCount,
+    unpaidCount,
+  };
+};
+
 // ======================== KPI CARD COMPONENT ========================
-const KpiCard = ({ title, value, hint, iconType = "default", trend, className = "" }) => {
+const KpiCard = ({ 
+  title, 
+  value,           // optional if invoices + metricType provided
+  hint, 
+  iconType = "default", 
+  trend, 
+  className = "",
+  invoices,        // optional: array of invoice objects
+  metricType,      // "totalCount" | "totalAmount" | "paidAmount" | "unpaidAmount" | "paidCount" | "unpaidCount"
+  currency = "KES"
+}) => {
   const IconComponent = MetricIcons[iconType] || MetricIcons.default;
+
+  // Compute dynamic value from invoices if provided
+  const dynamicValue = useMemo(() => {
+    if (invoices && metricType) {
+      const stats = computeStats(invoices);
+      let val = stats[metricType];
+      if (metricType.includes("Amount") && val !== undefined) {
+        // Format as currency
+        return new Intl.NumberFormat("en-KE", {
+          style: "currency",
+          currency,
+          minimumFractionDigits: 2,
+        }).format(val);
+      }
+      return val?.toLocaleString() ?? "0";
+    }
+    return value;
+  }, [invoices, metricType, value, currency]);
+
+  const dynamicHint = useMemo(() => {
+    if (invoices && metricType) {
+      if (metricType === "paidAmount") return "Total received";
+      if (metricType === "unpaidAmount") return "Outstanding balance";
+      if (metricType === "totalCount") return "Active invoices";
+      if (metricType === "paidCount") return "Paid invoices";
+      if (metricType === "unpaidCount") return "Unpaid + overdue";
+      if (metricType === "totalAmount") return "Total invoice value";
+    }
+    return hint;
+  }, [invoices, metricType, hint]);
 
   const getTrendColor = (trendValue) => {
     if (trendValue > 0) return "text-green-600 bg-green-50";
@@ -46,6 +134,9 @@ const KpiCard = ({ title, value, hint, iconType = "default", trend, className = 
     return "•";
   };
 
+  // Use dynamicValue if computed, otherwise passed value
+  const displayValue = dynamicValue !== undefined ? dynamicValue : (value ?? "0");
+
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all hover:shadow-md ${className}`}>
       {/* Header with icon and trend */}
@@ -55,16 +146,16 @@ const KpiCard = ({ title, value, hint, iconType = "default", trend, className = 
             {title}
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {value}
+            {displayValue}
           </div>
-          {hint && (
+          {dynamicHint && (
             <div className="flex items-center gap-1 mt-2 text-xs text-gray-400">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="16" x2="12" y2="12" />
                 <line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
-              {hint}
+              {dynamicHint}
             </div>
           )}
         </div>
