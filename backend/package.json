@@ -2,10 +2,10 @@
   "name": "yes",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "backend/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node backend/server.js"
   },
   "keywords": [],
   "author": "",
