@@ -9,7 +9,7 @@
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "frontend/dist"
       }
     }
   ],
@@ -19,8 +19,8 @@
       "destination": "/backend/server.js"
     },
     {
-      "source": "/:path((?!assets|static|favicon\\.ico|robots\\.txt).*)",
-      "destination": "/frontend/index.html"
+      "source": "/:path*",
+      "destination": "/frontend/dist/index.html"
     }
   ]
 }
