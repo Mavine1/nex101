@@ -4,32 +4,35 @@ import { useAuth } from "@clerk/clerk-react";
 import { invoicePreviewStyles } from "../assets/dummyStyles";
 
 // ----- helper functions -----
+
+// Strips localhost origins so Vercel's /uploads rewrite proxy handles the request.
+// Any other absolute URL (CDN etc.) is returned as-is.
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
-  if (s.startsWith("data:")) return s;
-  if (/^https?:\/\//i.test(s)) {
-    try {
-      return new URL(s).href;
-    } catch {
-      return s;
-    }
+
+  if (s.startsWith("data:") || s.startsWith("blob:")) return s;
+
+  // Strip localhost origin → return just the pathname
+  if (/^https?:\/\/localhost/i.test(s)) {
+    try { return new URL(s).pathname; } catch { return s; }
   }
+
+  // Any other absolute URL → return as-is
+  if (/^https?:\/\//i.test(s)) {
+    try { return new URL(s).href; } catch { return s; }
+  }
+
+  // Already a relative path
   return s.startsWith("/") ? s : `/${s}`;
 }
 
 function currencyFmt(amount = 0, currency = "KES") {
   try {
-    if (currency === "KES") {
-      return new Intl.NumberFormat("en-KE", {
-        style: "currency",
-        currency: "KES",
-        minimumFractionDigits: 2,
-      }).format(amount);
-    }
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(currency === "KES" ? "en-KE" : "en-US", {
       style: "currency",
-      currency: "USD",
+      currency,
+      minimumFractionDigits: 2,
     }).format(amount);
   } catch {
     return `${currency} ${Number(amount || 0).toFixed(2)}`;
@@ -43,9 +46,9 @@ function formatDate(dateInput) {
   const day = d.getDate();
   const month = d.toLocaleString("default", { month: "long" });
   const year = d.getFullYear();
-  const suffix = day => {
-    if (day > 3 && day < 21) return "th";
-    switch (day % 10) {
+  const suffix = (n) => {
+    if (n > 3 && n < 21) return "th";
+    switch (n % 10) {
       case 1: return "st";
       case 2: return "nd";
       case 3: return "rd";
@@ -59,10 +62,10 @@ function normalizeClient(raw) {
   if (!raw) return { name: "", email: "", address: "", phone: "", company: "" };
   if (typeof raw === "string") return { name: raw, email: "", address: "", phone: "", company: "" };
   return {
-    name: raw.name || raw.company || raw.client || "",
-    email: raw.email || "",
+    name:    raw.name    || raw.company || raw.client || "",
+    email:   raw.email   || "",
     address: raw.address || "",
-    phone: raw.phone || "",
+    phone:   raw.phone   || "",
     company: raw.company || "",
   };
 }
@@ -128,15 +131,16 @@ export default function InvoicePreview() {
   const obtainToken = useCallback(async () => {
     if (typeof getToken !== "function") return null;
     try {
-      let token = await getToken({ template: "default" }).catch(() => null);
-      if (!token) token = await getToken({ forceRefresh: true }).catch(() => null);
-      return token;
+      return (
+        (await getToken({ template: "default" }).catch(() => null)) ||
+        (await getToken({ forceRefresh: true }).catch(() => null))
+      );
     } catch {
       return null;
     }
   }, [getToken]);
 
-  // Fetch invoice if not passed via state
+  // ── Fetch invoice if not passed via router state ──
   useEffect(() => {
     let mounted = true;
     async function fetchInvoice() {
@@ -147,28 +151,30 @@ export default function InvoicePreview() {
         const token = await obtainToken();
         const headers = { Accept: "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const res = await fetch(`/api/invoice/${id}`, { method: "GET", headers });
+        const res = await fetch(`/api/invoice/${id}`, { headers });
         if (res.ok) {
           const json = await res.json();
           const data = json?.data ?? json;
           if (mounted && data) {
             setInvoice({
               ...data,
-              id: data._id ?? data.id ?? id,
-              items: Array.isArray(data.items) ? data.items : [],
+              id:            data._id ?? data.id ?? id,
+              items:         Array.isArray(data.items) ? data.items : [],
               invoiceNumber: data.invoiceNumber ?? "",
-              currency: data.currency || "KES",
-              issueDate: data.issueDate,
-              dueDate: data.dueDate,
-              client: data.client,
+              currency:      data.currency || "KES",
+              issueDate:     data.issueDate,
+              dueDate:       data.dueDate,
+              client:        data.client,
             });
           }
         } else if (res.status === 404) {
-          setInvoiceError("Invoice not found");
+          if (mounted) setInvoiceError("Invoice not found");
+        } else {
+          if (mounted) setInvoiceError("Failed to load invoice");
         }
       } catch (err) {
         console.warn("Error fetching invoice:", err);
-        setInvoiceError("Failed to load invoice");
+        if (mounted) setInvoiceError("Failed to load invoice");
       } finally {
         if (mounted) setLoadingInvoice(false);
       }
@@ -177,7 +183,7 @@ export default function InvoicePreview() {
     return () => { mounted = false; };
   }, [id, invoiceFromState, obtainToken]);
 
-  // Fetch business profile (contains payment method details)
+  // ── Fetch business profile ──
   useEffect(() => {
     let mounted = true;
     async function fetchProfile() {
@@ -186,31 +192,31 @@ export default function InvoicePreview() {
         const token = await obtainToken();
         const headers = { Accept: "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const res = await fetch("/api/businessProfile/me", { method: "GET", headers });
+        const res = await fetch("/api/businessProfile/me", { headers });
         if (res.ok) {
           const json = await res.json();
-          const data = json?.data ?? json;
-          if (mounted && data) {
+          const d = json?.data ?? json;
+          if (mounted && d) {
             setProfile({
-              businessName: data.businessName || "",
-              email: data.email || "",
-              address: data.address || "",
-              phone: data.phone || "",
-              location: data.location || "",
-              website: data.website || "",
-              terms: data.terms || "",
-              footer: data.footer || "",
-              // Payment details – fetched from profile
-              paymentMethod: data.paymentMethod || "",     // e.g., "M-PESA", "Bank Transfer"
-              paybill: data.paybill || "",
-              accountNumber: data.accountNumber || "",
-              accountName: data.accountName || "",
-              stampDataUrl: data.stampUrl ?? data.stampDataUrl ?? null,
-              signatureDataUrl: data.signatureUrl ?? data.signatureDataUrl ?? null,
-              logoDataUrl: data.logoUrl ?? data.logoDataUrl ?? null,
-              defaultTaxPercent: Number(data.defaultTaxPercent) || 18,
-              signatureName: data.signatureOwnerName || data.signatureName || "",
-              signatureTitle: data.signatureOwnerTitle || data.signatureTitle || "",
+              businessName:   d.businessName   || "",
+              email:          d.email          || "",
+              address:        d.address        || "",
+              phone:          d.phone          || "",
+              location:       d.location       || "",
+              website:        d.website        || "",
+              terms:          d.terms          || "",
+              footer:         d.footer         || "",
+              paymentMethod:  d.paymentMethod  || "",
+              paybill:        d.paybill        || "",
+              accountNumber:  d.accountNumber  || "",
+              accountName:    d.accountName    || "",
+              defaultTaxPercent: Number(d.defaultTaxPercent) || 18,
+              signatureName:  d.signatureOwnerName  || d.signatureName  || "",
+              signatureTitle: d.signatureOwnerTitle || d.signatureTitle || "",
+              // ✅ Normalised image fields — server returns logoUrl / stampUrl / signatureUrl
+              logoUrl:      d.logoUrl      ?? d.logoDataUrl      ?? null,
+              stampUrl:     d.stampUrl     ?? d.stampDataUrl     ?? null,
+              signatureUrl: d.signatureUrl ?? d.signatureDataUrl ?? null,
             });
           }
         }
@@ -224,13 +230,13 @@ export default function InvoicePreview() {
     return () => { mounted = false; };
   }, [obtainToken]);
 
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
+  const handlePrint = useCallback(() => { window.print(); }, []);
 
+  // ── Loading / error states ──
   if (loadingInvoice || profileLoading) {
     return <div className="p-6">Loading…</div>;
   }
+
   if (!invoice || invoiceError) {
     return (
       <div className={invoicePreviewStyles.pageContainer}>
@@ -256,48 +262,48 @@ export default function InvoicePreview() {
     );
   }
 
-  // Compute totals
+  // ── Derived values ──
   const items = (invoice.items || []).filter(Boolean);
   let subtotal = 0;
-  items.forEach(it => { subtotal += (it.qty || 0) * (it.unitPrice || 0); });
+  items.forEach((it) => { subtotal += (it.qty || 0) * (it.unitPrice || 0); });
   const taxPercent = invoice.taxPercent ?? profile?.defaultTaxPercent ?? 18;
-  const tax = (subtotal * taxPercent) / 100;
+  const tax   = (subtotal * taxPercent) / 100;
   const total = subtotal + tax;
 
-  // Images and signatures
-  const logo = resolveImageUrl(invoice.logoDataUrl ?? profile?.logoDataUrl ?? null);
-  const stamp = resolveImageUrl(invoice.stampDataUrl ?? profile?.stampDataUrl ?? null);
-  const signature = resolveImageUrl(invoice.signatureDataUrl ?? profile?.signatureDataUrl ?? null);
-  const signatureName = invoice.signatureName ?? profile?.signatureName ?? "";
+  // ✅ Resolve image URLs through the same helper — strips any localhost origins
+  const logo      = resolveImageUrl(invoice.logoUrl      ?? invoice.logoDataUrl      ?? profile?.logoUrl      ?? null);
+  const stamp     = resolveImageUrl(invoice.stampUrl     ?? invoice.stampDataUrl     ?? profile?.stampUrl     ?? null);
+  const signature = resolveImageUrl(invoice.signatureUrl ?? invoice.signatureDataUrl ?? profile?.signatureUrl ?? null);
+
+  const signatureName  = invoice.signatureName  ?? profile?.signatureName  ?? "";
   const signatureTitle = invoice.signatureTitle ?? profile?.signatureTitle ?? "";
-  const client = normalizeClient(invoice.client);
+
+  const client   = normalizeClient(invoice.client);
   const currency = invoice.currency || "KES";
 
-  // Seller info (from invoice or profile)
-  const sellerName = invoice.fromBusinessName || profile?.businessName || "";
-  const sellerAddress = invoice.fromAddress || profile?.address || "";
-  const sellerEmail = invoice.fromEmail || profile?.email || "";
-  const sellerPhone = invoice.fromPhone || profile?.phone || "";
-  const sellerLocation = invoice.fromLocation || profile?.location || "";
-  const sellerWebsite = profile?.website || "";
+  // Seller info
+  const sellerName     = invoice.fromBusinessName || profile?.businessName || "";
+  const sellerAddress  = invoice.fromAddress      || profile?.address      || "";
+  const sellerEmail    = invoice.fromEmail        || profile?.email        || "";
+  const sellerPhone    = invoice.fromPhone        || profile?.phone        || "";
+  const sellerLocation = invoice.fromLocation     || profile?.location     || "";
+  const sellerWebsite  = profile?.website || "";
 
-  // Payment details – all from profile
+  // Payment details
   const paymentMethod = profile?.paymentMethod || "";
-  const paybill = profile?.paybill || "";
+  const paybill       = profile?.paybill       || "";
   const accountNumber = profile?.accountNumber || "";
-  const accountName = profile?.accountName || "";
-  // Only show the payment block if at least one of these fields has a value
+  const accountName   = profile?.accountName   || "";
   const hasPaymentDetails = !!(paymentMethod || paybill || accountNumber || accountName);
 
-  const terms = invoice.terms || profile?.terms || "";
+  const terms  = invoice.terms  || profile?.terms  || "";
   const footer = invoice.footer || profile?.footer || "Thank you for your business!";
 
-  // Colors
-  const DARK = "#3b0030";
-  const PINK = "#c0005a";
+  // ── Design tokens ──
+  const DARK       = "#3b0030";
+  const PINK       = "#c0005a";
   const LIGHT_PINK = "#f5e6ee";
 
-  // Inline styles (same as previous correct version)
   const styles = {
     page: {
       fontFamily: "'Segoe UI', Arial, sans-serif",
@@ -309,46 +315,26 @@ export default function InvoicePreview() {
     },
     topWhiteSpace: { height: "18px", background: "white" },
     topBar: {
-      display: "flex",
-      alignItems: "stretch",
-      minHeight: "80px",
-      position: "relative",
-      overflow: "hidden",
+      display: "flex", alignItems: "stretch", minHeight: "80px",
+      position: "relative", overflow: "hidden",
     },
     topBarLeft: {
-      flex: 1,
-      display: "flex",
-      alignItems: "center",
-      padding: "14px 28px",
-      background: "white",
-      zIndex: 2,
+      flex: 1, display: "flex", alignItems: "center",
+      padding: "14px 28px", background: "white", zIndex: 2,
     },
     topBarRight: {
-      position: "relative",
-      minWidth: "300px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      paddingRight: "28px",
-      zIndex: 2,
+      position: "relative", minWidth: "300px", display: "flex",
+      alignItems: "center", justifyContent: "flex-end", paddingRight: "28px", zIndex: 2,
     },
     invoiceTitle: {
-      color: "white",
-      fontSize: "2.2rem",
-      fontWeight: "900",
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      lineHeight: 1,
-      zIndex: 3,
+      color: "white", fontSize: "2.2rem", fontWeight: "900",
+      letterSpacing: "0.14em", textTransform: "uppercase", lineHeight: 1, zIndex: 3,
     },
     pinkDivider: { height: "3px", background: PINK, width: "100%" },
     body: { padding: "24px 32px 0 32px" },
     infoRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      marginBottom: "22px",
-      gap: "16px",
+      display: "flex", justifyContent: "space-between",
+      alignItems: "flex-start", marginBottom: "22px", gap: "16px",
     },
     clientBlock: { flex: 1 },
     invoiceTo: { fontSize: "0.85rem", color: "#555", marginBottom: "2px" },
@@ -357,14 +343,8 @@ export default function InvoicePreview() {
     clientPhone: { color: "#444", fontSize: "0.88rem" },
     invoiceMetaBlock: { textAlign: "right", minWidth: "200px" },
     invoiceNoBadge: {
-      background: DARK,
-      color: "white",
-      fontWeight: "700",
-      fontSize: "0.95rem",
-      padding: "7px 18px",
-      display: "inline-block",
-      marginBottom: "6px",
-      letterSpacing: "0.04em",
+      background: DARK, color: "white", fontWeight: "700", fontSize: "0.95rem",
+      padding: "7px 18px", display: "inline-block", marginBottom: "6px", letterSpacing: "0.04em",
     },
     invoiceDateRow: { fontSize: "0.9rem", color: "#222" },
     invoiceDateVal: { color: PINK, fontWeight: "700" },
@@ -374,62 +354,40 @@ export default function InvoicePreview() {
     th: { color: "white", fontWeight: "700", fontSize: "0.78rem", padding: "10px 12px", textAlign: "left", textTransform: "uppercase" },
     thRight: { textAlign: "right" },
     tdEven: { padding: "10px 12px", fontSize: "0.88rem", color: "#222", background: "white", borderBottom: "1px solid #e8d0dc" },
-    tdOdd: { padding: "10px 12px", fontSize: "0.88rem", color: "#222", background: LIGHT_PINK, borderBottom: "1px solid #e8d0dc" },
+    tdOdd:  { padding: "10px 12px", fontSize: "0.88rem", color: "#222", background: LIGHT_PINK, borderBottom: "1px solid #e8d0dc" },
     tdRight: { textAlign: "right" },
-    tdBold: { fontWeight: "600" },
+    tdBold:  { fontWeight: "600" },
     bottomSection: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      padding: "20px 32px",
-      gap: "24px",
+      display: "flex", justifyContent: "space-between",
+      alignItems: "flex-start", padding: "20px 32px", gap: "24px",
     },
     paymentBlock: { flex: 1 },
     paymentBadge: {
-      background: PINK,
-      color: "white",
-      fontWeight: "700",
-      fontSize: "0.82rem",
-      padding: "5px 14px",
-      display: "inline-block",
-      marginBottom: "10px",
-      textTransform: "uppercase",
+      background: PINK, color: "white", fontWeight: "700", fontSize: "0.82rem",
+      padding: "5px 14px", display: "inline-block", marginBottom: "10px", textTransform: "uppercase",
     },
-    paymentRow: { display: "flex", gap: "8px", fontSize: "0.88rem", color: "#222", marginBottom: "2px" },
+    paymentRow:   { display: "flex", gap: "8px", fontSize: "0.88rem", color: "#222", marginBottom: "2px" },
     paymentLabel: { color: "#555", minWidth: "90px", fontWeight: "500" },
-    paymentVal: { fontWeight: "700", color: "#111" },
+    paymentVal:   { fontWeight: "700", color: "#111" },
     totalsBlock: { minWidth: "220px", textAlign: "right" },
-    totalsRow: { display: "flex", justifyContent: "space-between", gap: "24px", fontSize: "0.9rem", color: "#444", marginBottom: "4px" },
+    totalsRow: {
+      display: "flex", justifyContent: "space-between",
+      gap: "24px", fontSize: "0.9rem", color: "#444", marginBottom: "4px",
+    },
     totalsRowBold: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: "24px",
-      background: PINK,
-      color: "white",
-      padding: "7px 12px",
-      fontWeight: "700",
-      fontSize: "1rem",
-      marginTop: "4px",
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      gap: "24px", background: PINK, color: "white", padding: "7px 12px",
+      fontWeight: "700", fontSize: "1rem", marginTop: "4px",
     },
     termsSection: { padding: "0 32px 16px 32px" },
     termsTitle: {
-      color: DARK,
-      fontWeight: "800",
-      fontSize: "0.9rem",
-      textTransform: "uppercase",
-      letterSpacing: "0.06em",
-      marginBottom: "4px",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
+      color: DARK, fontWeight: "800", fontSize: "0.9rem", textTransform: "uppercase",
+      letterSpacing: "0.06em", marginBottom: "4px", display: "flex", alignItems: "center", gap: "8px",
     },
     termsLine: { width: "40px", height: "1px", background: "#bbb", flexShrink: 0 },
     termsText: { fontSize: "0.82rem", color: "#444", lineHeight: 1.6, maxWidth: "55%" },
     thankYouRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
+      display: "flex", justifyContent: "space-between", alignItems: "center",
       padding: "8px 32px 16px 32px",
     },
     thankYou: { color: PINK, fontWeight: "700", fontSize: "0.95rem", fontStyle: "italic" },
@@ -442,13 +400,8 @@ export default function InvoicePreview() {
     footerDivider: { height: "2px", background: PINK, margin: "0 32px" },
     footer: { padding: "14px 32px 10px 32px" },
     footerRow: {
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      fontSize: "0.82rem",
-      color: "#333",
-      marginBottom: "5px",
-      flexWrap: "wrap",
+      display: "flex", alignItems: "center", gap: "6px",
+      fontSize: "0.82rem", color: "#333", marginBottom: "5px", flexWrap: "wrap",
     },
     footerItem: { display: "flex", alignItems: "center", gap: "7px", marginRight: "20px" },
     cornerAccent: { display: "flex", justifyContent: "flex-end" },
@@ -458,16 +411,23 @@ export default function InvoicePreview() {
   return (
     <div className={invoicePreviewStyles.pageContainer}>
       <div className={invoicePreviewStyles.container}>
-        {/* Print / Edit header – no print */}
+
+        {/* ── Action bar (hidden on print) ── */}
         <div className={`${invoicePreviewStyles.headerContainer} ${invoicePreviewStyles.noPrint}`}>
           <div>
             <h1 className={invoicePreviewStyles.headerTitle}>Invoice Preview</h1>
             <p className={invoicePreviewStyles.headerSubtitle}>
-              Review invoice <span className={invoicePreviewStyles.headerInvoiceNumber}>#{invoice.invoiceNumber || invoice.id}</span>
+              Review invoice{" "}
+              <span className={invoicePreviewStyles.headerInvoiceNumber}>
+                #{invoice.invoiceNumber || invoice.id}
+              </span>
             </p>
           </div>
           <div className={invoicePreviewStyles.headerActions}>
-            <button onClick={() => navigate(`/app/invoices/${invoice.id}/edit`, { state: { invoice } })} className={invoicePreviewStyles.editInvoiceButton}>
+            <button
+              onClick={() => navigate(`/app/invoices/${invoice.id}/edit`, { state: { invoice } })}
+              className={invoicePreviewStyles.editInvoiceButton}
+            >
               <EditIcon className="w-4 h-4" /> Edit Invoice
             </button>
             <button onClick={handlePrint} className={invoicePreviewStyles.printButton}>
@@ -476,13 +436,17 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Printable invoice card */}
+        {/* ── Printable invoice ── */}
         <div id="print-area" style={styles.page}>
           <div style={styles.topWhiteSpace} />
 
-          {/* Header – single dark trapezium */}
+          {/* Header */}
           <div style={styles.topBar}>
-            <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }} viewBox="0 0 794 76" preserveAspectRatio="none">
+            <svg
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }}
+              viewBox="0 0 794 76"
+              preserveAspectRatio="none"
+            >
               <polygon points="340,0 794,0 794,76 290,76" fill={DARK} />
               <rect x="774" y="0" width="20" height="76" fill="#1a0015" />
             </svg>
@@ -501,7 +465,7 @@ export default function InvoicePreview() {
           </div>
           <div style={styles.pinkDivider} />
 
-          {/* Client & Invoice Info */}
+          {/* Client & invoice meta */}
           <div style={styles.body}>
             <div style={styles.infoRow}>
               <div style={styles.clientBlock}>
@@ -516,19 +480,21 @@ export default function InvoicePreview() {
                 </div>
                 {invoice.issueDate && (
                   <div style={styles.invoiceDateRow}>
-                    Invoice Date: <span style={styles.invoiceDateVal}>{formatDate(invoice.issueDate)}</span>
+                    Invoice Date:{" "}
+                    <span style={styles.invoiceDateVal}>{formatDate(invoice.issueDate)}</span>
                   </div>
                 )}
                 {invoice.dueDate && (
                   <div style={{ ...styles.invoiceDateRow, marginTop: "3px" }}>
-                    Due Date: <span style={styles.invoiceDateVal}>{formatDate(invoice.dueDate)}</span>
+                    Due Date:{" "}
+                    <span style={styles.invoiceDateVal}>{formatDate(invoice.dueDate)}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Items Table with stripes */}
+          {/* Items table */}
           <div style={styles.tableSection}>
             <table style={styles.table}>
               <thead style={styles.thead}>
@@ -549,14 +515,14 @@ export default function InvoicePreview() {
                   </tr>
                 ) : (
                   items.map((it, idx) => {
-                    const rowStyle = idx % 2 === 0 ? styles.tdEven : styles.tdOdd;
+                    const td = idx % 2 === 0 ? styles.tdEven : styles.tdOdd;
                     return (
                       <tr key={it.id || idx}>
-                        <td style={rowStyle}>{idx + 1}</td>
-                        <td style={rowStyle}>{it.description || "—"}</td>
-                        <td style={{ ...rowStyle, ...styles.tdRight }}>{it.qty || 0}</td>
-                        <td style={{ ...rowStyle, ...styles.tdRight }}>{currencyFmt(it.unitPrice || 0, currency)}</td>
-                        <td style={{ ...rowStyle, ...styles.tdRight, ...styles.tdBold }}>
+                        <td style={td}>{idx + 1}</td>
+                        <td style={td}>{it.description || "—"}</td>
+                        <td style={{ ...td, ...styles.tdRight }}>{it.qty || 0}</td>
+                        <td style={{ ...td, ...styles.tdRight }}>{currencyFmt(it.unitPrice || 0, currency)}</td>
+                        <td style={{ ...td, ...styles.tdRight, ...styles.tdBold }}>
                           {currencyFmt((it.qty || 0) * (it.unitPrice || 0), currency)}
                         </td>
                       </tr>
@@ -567,13 +533,11 @@ export default function InvoicePreview() {
             </table>
           </div>
 
-          {/* Payment Method + Totals – payment block only if details exist */}
+          {/* Payment + Totals */}
           <div style={styles.bottomSection}>
             {hasPaymentDetails && (
               <div style={styles.paymentBlock}>
-                <div style={styles.paymentBadge}>
-                  {paymentMethod || "PAYMENT METHOD"}
-                </div>
+                <div style={styles.paymentBadge}>{paymentMethod || "PAYMENT METHOD"}</div>
                 {paybill && (
                   <div style={styles.paymentRow}>
                     <span style={styles.paymentLabel}>PAYBILL:</span>
@@ -610,7 +574,7 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* Terms & Conditions */}
+          {/* Terms */}
           {terms && (
             <div style={styles.termsSection}>
               <div style={styles.termsTitle}>
@@ -621,7 +585,7 @@ export default function InvoicePreview() {
             </div>
           )}
 
-          {/* Thank you / Footer message + Signature + Stamp */}
+          {/* Footer message + Signature + Stamp */}
           <div style={styles.thankYouRow}>
             <div style={styles.thankYou}>{footer}</div>
             <div style={styles.signatureStampContainer}>
@@ -632,7 +596,11 @@ export default function InvoicePreview() {
               )}
               <div style={styles.signatureBlock}>
                 {signature && (
-                  <img src={signature} alt="Signature" style={{ maxHeight: "60px", maxWidth: "160px", objectFit: "contain", marginBottom: "6px" }} />
+                  <img
+                    src={signature}
+                    alt="Signature"
+                    style={{ maxHeight: "60px", maxWidth: "160px", objectFit: "contain", marginBottom: "6px" }}
+                  />
                 )}
                 <div style={styles.signatureLine}>
                   <div style={styles.signatureNameText}>{signatureName || "AUTHORIZED SIGNATORY"}</div>
@@ -642,30 +610,25 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* Footer contact info */}
+          {/* Contact footer */}
           <div style={styles.footerDivider} />
           <div style={styles.footer}>
             <div style={styles.footerRow}>
               {sellerPhone && (
-                <div style={styles.footerItem}>
-                  <PhoneIcon /> <span>{sellerPhone}</span>
-                </div>
+                <div style={styles.footerItem}><PhoneIcon /> <span>{sellerPhone}</span></div>
               )}
               {sellerEmail && (
-                <div style={styles.footerItem}>
-                  <EmailIcon /> <span>{sellerEmail}</span>
-                </div>
+                <div style={styles.footerItem}><EmailIcon /> <span>{sellerEmail}</span></div>
               )}
               {sellerWebsite && (
-                <div style={styles.footerItem}>
-                  <WebIcon /> <span>{sellerWebsite}</span>
-                </div>
+                <div style={styles.footerItem}><WebIcon /> <span>{sellerWebsite}</span></div>
               )}
             </div>
             {(sellerAddress || sellerLocation) && (
               <div style={styles.footerRow}>
                 <div style={styles.footerItem}>
-                  <LocationIcon /> <span>{[sellerAddress, sellerLocation].filter(Boolean).join(", ")}</span>
+                  <LocationIcon />
+                  <span>{[sellerAddress, sellerLocation].filter(Boolean).join(", ")}</span>
                 </div>
               </div>
             )}
