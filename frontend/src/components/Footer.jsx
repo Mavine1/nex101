@@ -60,44 +60,6 @@ const Footer = () => {
           </div>
 
           {/* Middle: social media icons */}
-          <div className="flex gap-4 items-center">
-            <a
-              href="https://twitter.com/nex101hub"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-[#1DA1F2] transition-all duration-300 transform hover:scale-110"
-              aria-label="Twitter"
-            >
-              <TwitterIcon />
-            </a>
-            <a
-              href="https://linkedin.com/company/nex101hub"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-[#0077B5] transition-all duration-300 transform hover:scale-110"
-              aria-label="LinkedIn"
-            >
-              <LinkedInIcon />
-            </a>
-            <a
-              href="https://instagram.com/nex101hub"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-[#E4405F] transition-all duration-300 transform hover:scale-110"
-              aria-label="Instagram"
-            >
-              <InstagramIcon />
-            </a>
-            <a
-              href="https://tiktok.com/@nex101hub"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-[#010101] transition-all duration-300 transform hover:scale-110"
-              aria-label="TikTok"
-            >
-              <TikTokIcon />
-            </a>
-          </div>
 
           {/* Right side: legal links */}
           <div className={footerStyles.links}>
