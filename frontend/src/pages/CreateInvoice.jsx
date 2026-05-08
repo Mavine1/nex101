@@ -78,22 +78,17 @@ function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// Kenyan Shillings formatter – always KES
 function currencyFmt(amount = 0, currency = "KES") {
   try {
     const n = Number(amount || 0);
-    if (currency === "KES") {
-      return new Intl.NumberFormat("en-KE", {
-        style: "currency",
-        currency: "KES",
-        minimumFractionDigits: 2,
-      }).format(n);
-    }
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-KE", {
       style: "currency",
-      currency: "USD",
+      currency: "KES",
+      minimumFractionDigits: 2,
     }).format(n);
   } catch {
-    return `${currency} ${amount}`;
+    return `KES ${amount}`;
   }
 }
 
@@ -169,7 +164,7 @@ export default function CreateInvoice() {
       items: [{ id: uid(), description: "Service / Item", qty: 1, unitPrice: 0 }],
       currency: "KES",
       status: "draft",
-      taxPercent: 16,
+      taxPercent: 16,        // Kenyan VAT rate
       notes: "",
     };
   }
@@ -382,7 +377,7 @@ export default function CreateInvoice() {
         fromLocation: invoice.fromLocation,
         client: invoice.client,
         items: items,
-        currency: invoice.currency || "KES",
+        currency: "KES",
         status: invoice.status,
         taxPercent: invoice.taxPercent,
         subtotal: computeTotals(items, invoice.taxPercent).subtotal,
@@ -466,7 +461,7 @@ export default function CreateInvoice() {
         client: { ...prev.client, ...aiData.client },
         items: aiData.items && aiData.items.length ? aiData.items : prev.items,
         taxPercent: aiData.taxPercent || prev.taxPercent,
-        currency: aiData.currency || prev.currency,
+        currency: "KES",
         status: aiData.status || prev.status,
       }));
       setItems(aiData.items && aiData.items.length ? aiData.items : items);
@@ -665,7 +660,7 @@ export default function CreateInvoice() {
               </div>
               <h3 className={createInvoiceStyles.cardTitle}>Items & Services</h3>
             </div>
-            <div className={createInvoiceStyles.currencyBadge}>All amounts in {invoice.currency}</div>
+            <div className={createInvoiceStyles.currencyBadge}>All amounts in KES</div>
           </div>
 
           <div className={createInvoiceStyles.itemsListWrapper}>
@@ -695,7 +690,7 @@ export default function CreateInvoice() {
                     />
                   </div>
                   <div className={createInvoiceStyles.itemColUnitPrice}>
-                    <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`price-${idx}`}>Unit Price</label>
+                    <label className={createInvoiceStyles.itemsFieldLabel} htmlFor={`price-${idx}`}>Unit Price (KES)</label>
                     <input
                       id={`price-${idx}`}
                       type="text"
@@ -706,8 +701,8 @@ export default function CreateInvoice() {
                     />
                   </div>
                   <div className={createInvoiceStyles.itemColTotal}>
-                    <label className={createInvoiceStyles.itemsFieldLabel}>Total</label>
-                    <div className={createInvoiceStyles.itemsTotal}>{currencyFmt(totalValue, invoice.currency)}</div>
+                    <label className={createInvoiceStyles.itemsFieldLabel}>Total (KES)</label>
+                    <div className={createInvoiceStyles.itemsTotal}>{currencyFmt(totalValue, "KES")}</div>
                   </div>
                   <div className={createInvoiceStyles.itemColRemove}>
                     <button type="button" onClick={() => removeItem(idx)} className={createInvoiceStyles.itemsRemoveButton}>
@@ -739,7 +734,7 @@ export default function CreateInvoice() {
           <div className="ai-modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-semibold mb-4">Create Invoice with AI</h3>
             <p className="text-sm text-gray-600 mb-3">
-              Describe the invoice you want (e.g., "Invoice for web design services, client John Doe, amount $500, due next month").
+              Describe the invoice you want (e.g., "Invoice for web design services, client John Doe, amount KES 500, due next month").
             </p>
             <textarea
               className="w-full border border-gray-300 rounded-lg p-3 mb-4"
