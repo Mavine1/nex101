@@ -21,7 +21,13 @@ const businessProfileSchema = new mongoose.Schema({
     // New fields
     website: { type: String, default: "" },
     terms: { type: String, default: "" },
-    footer: { type: String, default: "" }
+    footer: { type: String, default: "" },
+
+    // Payment method fields
+    paymentMethod: { type: String, default: "" },   // e.g., "M-PESA", "Bank Transfer"
+    paybill: { type: String, default: "" },         // Paybill / Till number
+    accountNumber: { type: String, default: "" },   // Account number
+    accountName: { type: String, default: "" }      // Account name
 }, {
     timestamps: true
 });
