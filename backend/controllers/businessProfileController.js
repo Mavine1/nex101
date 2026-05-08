@@ -20,7 +20,7 @@ function uploadedFilesToUrls(req) {
     return urls;
 }
 
-// UPSERT (create or update)
+// UPSERT (create or update) – now includes payment fields
 export async function createBusinessProfile(req, res) {
     try {
         const { userId } = getAuth(req);
@@ -36,10 +36,16 @@ export async function createBusinessProfile(req, res) {
             email: body.email || "",
             address: body.address || "",
             phone: body.phone || "",
-            location: body.location || "",          // only location, no gst
+            location: body.location || "",
             website: body.website || "",
             terms: body.terms || "",
             footer: body.footer || "",
+            // Payment fields
+            paymentMethod: body.paymentMethod || "",
+            paybill: body.paybill || "",
+            accountNumber: body.accountNumber || "",
+            accountName: body.accountName || "",
+            // Images and signature
             logoUrl: fileUrls.logoUrl || body.logoUrl || null,
             stampUrl: fileUrls.stampUrl || body.stampUrl || null,
             signatureUrl: fileUrls.signatureUrl || body.signatureUrl || null,
@@ -86,14 +92,16 @@ export async function getMyBusinessProfile(req, res) {
     }
 }
 
-// Update by ID (optional)
+// Update by ID – includes payment fields, no duplicate profile creation (updates specific document)
 export async function updateBusinessProfile(req, res) {
     try {
         const { userId } = getAuth(req);
         if (!userId) return res.status(401).json({ success: false, message: "Authentication required." });
+        
         const { id } = req.params;
         const body = req.body || {};
         const fileUrls = uploadedFilesToUrls(req);
+        
         const existing = await BusinessProfile.findOne({ _id: id, owner: userId });
         if (!existing) return res.status(404).json({ success: false, message: "Business profile not found." });
 
@@ -106,10 +114,15 @@ export async function updateBusinessProfile(req, res) {
             website: body.website,
             terms: body.terms,
             footer: body.footer,
+            paymentMethod: body.paymentMethod,
+            paybill: body.paybill,
+            accountNumber: body.accountNumber,
+            accountName: body.accountName,
             signatureOwnerName: body.signatureOwnerName,
             signatureOwnerTitle: body.signatureOwnerTitle,
             defaultTaxPercent: body.defaultTaxPercent !== undefined ? Number(body.defaultTaxPercent) : undefined,
         };
+        
         if (fileUrls.logoUrl) update.logoUrl = fileUrls.logoUrl;
         else if (body.logoUrl !== undefined) update.logoUrl = body.logoUrl;
         if (fileUrls.stampUrl) update.stampUrl = fileUrls.stampUrl;
@@ -119,8 +132,17 @@ export async function updateBusinessProfile(req, res) {
 
         Object.keys(update).forEach(k => update[k] === undefined && delete update[k]);
 
-        const updated = await BusinessProfile.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true });
-        return res.status(200).json({ success: true, data: updated, message: "Business Profile Updated." });
+        const updated = await BusinessProfile.findByIdAndUpdate(
+            id, 
+            { $set: update }, 
+            { new: true, runValidators: true }
+        );
+        
+        return res.status(200).json({ 
+            success: true, 
+            data: updated, 
+            message: "Business Profile Updated." 
+        });
     } catch (error) {
         console.error("updateBusinessProfile error:", error);
         return res.status(500).json({ success: false, message: "Server Error" });
