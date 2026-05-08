@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { aiInvoiceModalStyles } from "../assets/dummyStyles";
 import GeminiIcon from "./GeminiIcon";
-import AnimatedButton from "../assets/GenerateBtn/Gbtn";
 
 const AiInvoiceModal = ({ open, onClose, onGenerate, initialText = "" }) => {
   const [text, setText] = useState(initialText || "");
@@ -58,6 +57,7 @@ const AiInvoiceModal = ({ open, onClose, onGenerate, initialText = "" }) => {
           <button
             onClick={() => onClose && onClose()}
             className={aiInvoiceModalStyles.closeButton}
+            aria-label="Close"
           >
             ✕
           </button>
@@ -68,19 +68,20 @@ const AiInvoiceModal = ({ open, onClose, onGenerate, initialText = "" }) => {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={`eg. A person wants a logo design for her organic brand "GreenVibe." Quoted for $120 for 2 logo options and final delivery in PNG and vector format`}
+            placeholder="eg. A person wants a logo design for her organic brand 'GreenVibe.' Quoted for $120 for 2 logo options and final delivery in PNG and vector format"
             rows={8}
             className={aiInvoiceModalStyles.textarea}
           />
         </div>
 
         <div className={aiInvoiceModalStyles.actions}>
-          <AnimatedButton
+          <button
             onClick={handleGenerateClick}
-            isLoading={loading}
             disabled={loading}
-            label="Generate"
-          />
+            className={aiInvoiceModalStyles.generateButton}
+          >
+            {loading ? "Generating..." : "Generate"}
+          </button>
         </div>
 
         {error && (
