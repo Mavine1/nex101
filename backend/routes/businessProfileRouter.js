@@ -27,12 +27,13 @@ const upload = multer({ storage: storage });
 // Apply clerk middleware to all routes
 businessProfileRouter.use(clerkMiddleware());
 
-// GET current user's profile (includes location, website, terms, footer)
+// GET current user's profile (includes location, website, terms, footer, payment settings)
 businessProfileRouter.get("/me", getMyBusinessProfile);
 
 // POST - create or update (upsert) the current user's profile
-// Handles all fields: businessName, email, address, phone, location,
-// website, terms, footer, signature details, tax percent, and image uploads
+// Handles all fields: businessName, email, address, phone, location, website, 
+// terms, footer, paymentMethod, paybill, accountNumber, accountName,
+// signature details, defaultTaxPercent, and image uploads (logo, stamp, signature)
 businessProfileRouter.post(
   "/me",
   upload.fields([

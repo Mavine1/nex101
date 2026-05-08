@@ -162,6 +162,12 @@ export default function BusinessProfile() {
           website: data.website ?? "",
           terms: data.terms ?? "",
           footer: data.footer ?? "",
+          // Payment fields
+          paymentMethod: data.paymentMethod ?? "",
+          paybill: data.paybill ?? "",
+          accountNumber: data.accountNumber ?? "",
+          accountName: data.accountName ?? "",
+          // Images and signature
           logoUrl: data.logoUrl ?? null,
           stampUrl: data.stampUrl ?? null,
           signatureUrl: data.signatureUrl ?? null,
@@ -259,6 +265,11 @@ export default function BusinessProfile() {
       fd.append("website", meta.website || "");
       fd.append("terms", meta.terms || "");
       fd.append("footer", meta.footer || "");
+      // Payment fields
+      fd.append("paymentMethod", meta.paymentMethod || "");
+      fd.append("paybill", meta.paybill || "");
+      fd.append("accountNumber", meta.accountNumber || "");
+      fd.append("accountName", meta.accountName || "");
       fd.append("defaultTaxPercent", String(meta.defaultTaxPercent ?? 18));
       fd.append("signatureOwnerName", meta.signatureOwnerName || "");
       fd.append("signatureOwnerTitle", meta.signatureOwnerTitle || "");
@@ -295,6 +306,10 @@ export default function BusinessProfile() {
         website: saved.website ?? meta.website,
         terms: saved.terms ?? meta.terms,
         footer: saved.footer ?? meta.footer,
+        paymentMethod: saved.paymentMethod ?? meta.paymentMethod,
+        paybill: saved.paybill ?? meta.paybill,
+        accountNumber: saved.accountNumber ?? meta.accountNumber,
+        accountName: saved.accountName ?? meta.accountName,
         logoUrl: saved.logoUrl ?? meta.logoUrl,
         stampUrl: saved.stampUrl ?? meta.stampUrl,
         signatureUrl: saved.signatureUrl ?? meta.signatureUrl,
@@ -504,6 +519,62 @@ export default function BusinessProfile() {
                 onChange={(e) => updateMeta("footer", e.target.value)}
                 className={businessProfileStyles.textarea}
                 placeholder="Additional note or footer message displayed on invoices"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Settings Card (new) */}
+        <div className={businessProfileStyles.cardContainer}>
+          <div className={businessProfileStyles.cardHeaderContainer}>
+            <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4-3-9s1.34-9 3-9" />
+                <line x1="12" y1="3" x2="12" y2="21" />
+              </svg>
+            </div>
+            <h2 className={businessProfileStyles.cardTitle}>Payment Settings</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className={businessProfileStyles.label}>Payment Method Name</label>
+              <input
+                type="text"
+                value={meta.paymentMethod || ""}
+                onChange={(e) => updateMeta("paymentMethod", e.target.value)}
+                className={businessProfileStyles.input}
+                placeholder="e.g., M-PESA, Bank Transfer, PayPal"
+              />
+            </div>
+            <div>
+              <label className={businessProfileStyles.label}>Paybill / Till Number</label>
+              <input
+                type="text"
+                value={meta.paybill || ""}
+                onChange={(e) => updateMeta("paybill", e.target.value)}
+                className={businessProfileStyles.input}
+                placeholder="e.g., 247247"
+              />
+            </div>
+            <div>
+              <label className={businessProfileStyles.label}>Account Number</label>
+              <input
+                type="text"
+                value={meta.accountNumber || ""}
+                onChange={(e) => updateMeta("accountNumber", e.target.value)}
+                className={businessProfileStyles.input}
+                placeholder="e.g., 0799501465"
+              />
+            </div>
+            <div>
+              <label className={businessProfileStyles.label}>Account Name</label>
+              <input
+                type="text"
+                value={meta.accountName || ""}
+                onChange={(e) => updateMeta("accountName", e.target.value)}
+                className={businessProfileStyles.input}
+                placeholder="e.g., NEX101"
               />
             </div>
           </div>
