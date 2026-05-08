@@ -67,7 +67,7 @@ function normalizeClient(raw) {
   };
 }
 
-// ----- icons (pink accent) -----
+// ----- icons -----
 const PhoneIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0005a" strokeWidth="2">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -136,7 +136,7 @@ export default function InvoicePreview() {
     }
   }, [getToken]);
 
-  // Fetch invoice
+  // Fetch invoice if not passed via state
   useEffect(() => {
     let mounted = true;
     async function fetchInvoice() {
@@ -177,7 +177,7 @@ export default function InvoicePreview() {
     return () => { mounted = false; };
   }, [id, invoiceFromState, obtainToken]);
 
-  // Fetch business profile
+  // Fetch business profile (contains payment method details)
   useEffect(() => {
     let mounted = true;
     async function fetchProfile() {
@@ -200,9 +200,11 @@ export default function InvoicePreview() {
               website: data.website || "",
               terms: data.terms || "",
               footer: data.footer || "",
-              paybill: data.paybill || "247247",
-              accountNumber: data.accountNumber || "0799501465",
-              accountName: data.accountName || "NEX101",
+              // Payment details – fetched from profile
+              paymentMethod: data.paymentMethod || "",     // e.g., "M-PESA", "Bank Transfer"
+              paybill: data.paybill || "",
+              accountNumber: data.accountNumber || "",
+              accountName: data.accountName || "",
               stampDataUrl: data.stampUrl ?? data.stampDataUrl ?? null,
               signatureDataUrl: data.signatureUrl ?? data.signatureDataUrl ?? null,
               logoDataUrl: data.logoUrl ?? data.logoDataUrl ?? null,
@@ -262,6 +264,7 @@ export default function InvoicePreview() {
   const tax = (subtotal * taxPercent) / 100;
   const total = subtotal + tax;
 
+  // Images and signatures
   const logo = resolveImageUrl(invoice.logoDataUrl ?? profile?.logoDataUrl ?? null);
   const stamp = resolveImageUrl(invoice.stampDataUrl ?? profile?.stampDataUrl ?? null);
   const signature = resolveImageUrl(invoice.signatureDataUrl ?? profile?.signatureDataUrl ?? null);
@@ -270,6 +273,7 @@ export default function InvoicePreview() {
   const client = normalizeClient(invoice.client);
   const currency = invoice.currency || "KES";
 
+  // Seller info (from invoice or profile)
   const sellerName = invoice.fromBusinessName || profile?.businessName || "";
   const sellerAddress = invoice.fromAddress || profile?.address || "";
   const sellerEmail = invoice.fromEmail || profile?.email || "";
@@ -277,9 +281,14 @@ export default function InvoicePreview() {
   const sellerLocation = invoice.fromLocation || profile?.location || "";
   const sellerWebsite = profile?.website || "";
 
-  const paybill = profile?.paybill || "247247";
-  const accountNumber = profile?.accountNumber || "0799501465";
-  const accountName = profile?.accountName || "NEX101";
+  // Payment details – all from profile
+  const paymentMethod = profile?.paymentMethod || "";
+  const paybill = profile?.paybill || "";
+  const accountNumber = profile?.accountNumber || "";
+  const accountName = profile?.accountName || "";
+  // Only show the payment block if at least one of these fields has a value
+  const hasPaymentDetails = !!(paymentMethod || paybill || accountNumber || accountName);
+
   const terms = invoice.terms || profile?.terms || "";
   const footer = invoice.footer || profile?.footer || "Thank you for your business!";
 
@@ -288,7 +297,7 @@ export default function InvoicePreview() {
   const PINK = "#c0005a";
   const LIGHT_PINK = "#f5e6ee";
 
-  // Inline styles – only signature/stamp block increased in size
+  // Inline styles (same as previous correct version)
   const styles = {
     page: {
       fontFamily: "'Segoe UI', Arial, sans-serif",
@@ -449,7 +458,7 @@ export default function InvoicePreview() {
   return (
     <div className={invoicePreviewStyles.pageContainer}>
       <div className={invoicePreviewStyles.container}>
-        {/* Print / Edit header (no-print) */}
+        {/* Print / Edit header – no print */}
         <div className={`${invoicePreviewStyles.headerContainer} ${invoicePreviewStyles.noPrint}`}>
           <div>
             <h1 className={invoicePreviewStyles.headerTitle}>Invoice Preview</h1>
@@ -471,7 +480,7 @@ export default function InvoicePreview() {
         <div id="print-area" style={styles.page}>
           <div style={styles.topWhiteSpace} />
 
-          {/* Header with single trapezium */}
+          {/* Header – single dark trapezium */}
           <div style={styles.topBar}>
             <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1 }} viewBox="0 0 794 76" preserveAspectRatio="none">
               <polygon points="340,0 794,0 794,76 290,76" fill={DARK} />
@@ -519,7 +528,7 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* Items Table (striped) */}
+          {/* Items Table with stripes */}
           <div style={styles.tableSection}>
             <table style={styles.table}>
               <thead style={styles.thead}>
@@ -558,23 +567,33 @@ export default function InvoicePreview() {
             </table>
           </div>
 
-          {/* Payment Method & Totals */}
+          {/* Payment Method + Totals – payment block only if details exist */}
           <div style={styles.bottomSection}>
-            <div style={styles.paymentBlock}>
-              <div style={styles.paymentBadge}>PAYMENT METHOD</div>
-              <div style={styles.paymentRow}>
-                <span style={styles.paymentLabel}>PAYBILL:</span>
-                <span style={styles.paymentVal}>{paybill}</span>
+            {hasPaymentDetails && (
+              <div style={styles.paymentBlock}>
+                <div style={styles.paymentBadge}>
+                  {paymentMethod || "PAYMENT METHOD"}
+                </div>
+                {paybill && (
+                  <div style={styles.paymentRow}>
+                    <span style={styles.paymentLabel}>PAYBILL:</span>
+                    <span style={styles.paymentVal}>{paybill}</span>
+                  </div>
+                )}
+                {accountNumber && (
+                  <div style={styles.paymentRow}>
+                    <span style={styles.paymentLabel}>ACC. NO.:</span>
+                    <span style={styles.paymentVal}>{accountNumber}</span>
+                  </div>
+                )}
+                {accountName && (
+                  <div style={styles.paymentRow}>
+                    <span style={styles.paymentLabel}>ACC. NAME:</span>
+                    <span style={styles.paymentVal}>{accountName}</span>
+                  </div>
+                )}
               </div>
-              <div style={styles.paymentRow}>
-                <span style={styles.paymentLabel}>ACC. NO.:</span>
-                <span style={styles.paymentVal}>{accountNumber}</span>
-              </div>
-              <div style={styles.paymentRow}>
-                <span style={styles.paymentLabel}>ACC. NAME:</span>
-                <span style={styles.paymentVal}>{accountName}</span>
-              </div>
-            </div>
+            )}
             <div style={styles.totalsBlock}>
               <div style={styles.totalsRow}>
                 <span>SUB TOTAL</span>
@@ -602,7 +621,7 @@ export default function InvoicePreview() {
             </div>
           )}
 
-          {/* Thank you + Signature + Stamp (aligned, bigger images) */}
+          {/* Thank you / Footer message + Signature + Stamp */}
           <div style={styles.thankYouRow}>
             <div style={styles.thankYou}>{footer}</div>
             <div style={styles.signatureStampContainer}>
@@ -623,7 +642,7 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* Footer */}
+          {/* Footer contact info */}
           <div style={styles.footerDivider} />
           <div style={styles.footer}>
             <div style={styles.footerRow}>
