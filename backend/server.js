@@ -30,21 +30,19 @@ app.use(express.urlencoded({ limit: "20mb", extended: true }));
 
 // ❌ Static 'uploads' folder will NOT work on Vercel (ephemeral storage)
 // Instead, we conditionally enable it only in local development.
-// For production, use cloud storage (e.g., S3, Cloudinary, Vercel Blob).
 const isVercel = process.env.VERCEL === '1';
 if (!isVercel) {
     app.use('/uploads', express.static(path.join(__dirname, "uploads")));
     console.log('📁 Uploads folder served locally only');
 }
 
-// DATABASE CONNECTION – called once when serverless function initializes (cold start)
-// This will reuse the same connection across invocations if your DB driver supports it.
+// DATABASE CONNECTION – reused across serverless invocations
 connectDB();
 
 // ROUTES
 app.use('/api/invoice', invoiceRouter);
 app.use('/api/businessProfile', businessProfileRouter);
-app.use('/api/ai', aiInvoiceRouter);
+app.use('/api/ai-invoice', aiInvoiceRouter);   // ✅ FIXED: now matches frontend request
 
 app.get('/', (req, res) => {
     res.send('API WORKING');
