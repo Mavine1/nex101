@@ -7,16 +7,23 @@ const aiInvoiceRouter = express.Router();
 
 const API_KEY = process.env.GEMINI_API_KEY;
 if (!API_KEY) {
-    console.warn("No Gemini Key found in the .env");
+    console.error("❌ GEMINI_API_KEY is missing in .env – AI features will fail.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
-
+// Use a dynamic model list with the latest available Google Gemini models
 const MODEL_CANDIDATES = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-2.0",
+    "gemini-2.0-flash",      // fastest, good for simple extractions
+    "gemini-1.5-flash",      // fallback
+    "gemini-1.5-pro",        // slower but more accurate
 ];
+
+// Only initialise AI client if API key exists
+let ai = null;
+if (API_KEY) {
+    ai = new GoogleGenAI({ apiKey: API_KEY });
+} else {
+    console.warn("⚠️ GoogleGenAI client not initialised – AI generation will fail.");
+}
 
 // Template matching the actual Invoice schema (computed fields omitted)
 function buildInvoicePrompt(promptText) {
@@ -28,12 +35,12 @@ function buildInvoicePrompt(promptText) {
         fromEmail: "",
         fromAddress: "",
         fromPhone: "",
-        fromLocation: "",          // replaces GST field
-        client: { 
-            name: "", 
-            email: "", 
-            address: "", 
-            phone: "" 
+        fromLocation: "",
+        client: {
+            name: "",
+            email: "",
+            address: "",
+            phone: ""
         },
         items: [{ id: "1", description: "", qty: 1, unitPrice: 0 }],
         taxPercent: 18,
@@ -41,7 +48,6 @@ function buildInvoicePrompt(promptText) {
         status: "draft",
         signatureName: "",
         signatureTitle: ""
-        // logoDataUrl, stampDataUrl, signatureDataUrl are optional – AI won't generate them
     };
 
     return `
@@ -67,6 +73,8 @@ Output: valid JSON only (no surrounding text, no backticks).
 }
 
 async function tryGenerateWithModel(modelName, prompt) {
+    if (!ai) throw new Error("AI client not initialised (missing API key).");
+
     const response = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
@@ -74,7 +82,7 @@ async function tryGenerateWithModel(modelName, prompt) {
 
     let text = null;
 
-    // Extract text from various response formats
+    // Extract text from various response formats (Google GenAI SDK can vary)
     if (response && typeof response.text === "string") {
         text = response.text;
     } else if (response && response.output && Array.isArray(response.output)) {
@@ -116,6 +124,14 @@ async function tryGenerateWithModel(modelName, prompt) {
 // Route to generate invoice from text prompt
 aiInvoiceRouter.post("/generate", async (req, res) => {
     try {
+        // Validate API key early
+        if (!API_KEY || !ai) {
+            return res.status(503).json({
+                success: false,
+                message: "AI service unavailable: missing or invalid API key."
+            });
+        }
+
         const { prompt } = req.body;
 
         if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
@@ -130,6 +146,7 @@ aiInvoiceRouter.post("/generate", async (req, res) => {
         let lastText = null;
         let usedModel = null;
 
+        // Try each model candidate in order
         for (const model of MODEL_CANDIDATES) {
             try {
                 const { text, modelName } = await tryGenerateWithModel(model, fullPrompt);
@@ -159,7 +176,7 @@ aiInvoiceRouter.post("/generate", async (req, res) => {
         if (cleanText.startsWith("```json") || cleanText.startsWith("```")) {
             cleanText = cleanText.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
         }
-        
+
         const firstBrace = cleanText.indexOf("{");
         const lastBrace = cleanText.lastIndexOf("}");
 
