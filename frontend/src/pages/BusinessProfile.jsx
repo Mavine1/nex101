@@ -35,18 +35,55 @@ const injectToastStyles = () => {
 };
 
 // ======================== IMAGE URL RESOLVER ========================
+// Strips localhost origins so Vercel's /uploads rewrite proxy handles the request.
+// Relative paths (e.g. /uploads/file.jpg) are returned as-is — correct for production.
 function resolveImageUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
+
+  // Blob / data URLs are always local — return as-is
   if (s.startsWith("blob:") || s.startsWith("data:")) return s;
+
+  // Strip any localhost origin and return just the pathname
+  // e.g. "http://localhost:4000/uploads/foo.jpg" → "/uploads/foo.jpg"
+  if (/^https?:\/\/localhost/i.test(s)) {
+    try {
+      return new URL(s).pathname;
+    } catch {
+      return s;
+    }
+  }
+
+  // Any other absolute URL (e.g. a CDN) — return as-is
   if (/^https?:\/\//i.test(s)) {
     try {
       return new URL(s).href;
     } catch {
-      // fall through
+      return s;
     }
   }
+
+  // Relative path — return as-is
   return s;
+}
+
+// ======================== TOAST HELPER ========================
+function toast(icon, title, text, extra = {}) {
+  const isSuccess = icon === "success";
+  Swal.fire({
+    icon,
+    title,
+    text,
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: isSuccess ? 2000 : 2500,
+    background: isSuccess ? "#f0fdf4" : "#fef2f2",
+    color: isSuccess ? "#166534" : "#991b1b",
+    iconColor: isSuccess ? "#22c55e" : "#ef4444",
+    customClass: { popup: "swal-small-toast" },
+    ...extra,
+  });
 }
 
 // ======================== ICON COMPONENTS ========================
@@ -87,41 +124,78 @@ const ResetIcon = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
+// ======================== UPLOAD SLOT COMPONENT ========================
+// Reusable upload slot to eliminate copy-paste across logo / stamp / signature
+function UploadSlot({ kind, preview, inputId, label, subtitle, icon, previewClass, onPick, onRemove }) {
+  return (
+    <div className={businessProfileStyles.uploadArea}>
+      {preview ? (
+        <div className={businessProfileStyles.imagePreviewContainer}>
+          <div className={previewClass}>
+            <img src={preview} alt={`${label} preview`} className="object-contain w-full h-full" />
+          </div>
+          <div className={businessProfileStyles.buttonGroup}>
+            <label className={businessProfileStyles.changeButton}>
+              <UploadIcon className="w-4 h-4" /> Change
+              <input type="file" accept="image/*" onChange={(e) => onPick(e.target.files?.[0])} className="hidden" />
+            </label>
+            <button type="button" onClick={onRemove} className={businessProfileStyles.removeButton}>
+              <DeleteIcon className="w-4 h-4" /> Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="cursor-pointer block" onClick={() => document.getElementById(inputId).click()}>
+          <div className={`${businessProfileStyles.imagePreviewContainer} ${businessProfileStyles.hoverScale}`}>
+            <div className={businessProfileStyles.uploadSmallIconContainer}>
+              {icon}
+            </div>
+            <div>
+              <p className={businessProfileStyles.uploadTextTitle}>Upload {label}</p>
+              <p className={businessProfileStyles.uploadTextSubtitle}>{subtitle}</p>
+            </div>
+          </div>
+          <input
+            id={inputId}
+            type="file"
+            accept="image/*"
+            onChange={(e) => onPick(e.target.files?.[0])}
+            className="hidden"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ======================== MAIN COMPONENT ========================
+const EMPTY_FILES = { logo: null, stamp: null, signature: null };
+const EMPTY_PREVIEWS = { logo: null, stamp: null, signature: null };
+
 export default function BusinessProfile() {
   const { getToken, isSignedIn } = useAuth();
 
-  // Inject toast styles once
-  useEffect(() => {
-    injectToastStyles();
-  }, []);
+  useEffect(() => { injectToastStyles(); }, []);
 
   const [meta, setMeta] = useState({});
   const [saving, setSaving] = useState(false);
+  const [files, setFiles] = useState(EMPTY_FILES);
+  const [previews, setPreviews] = useState(EMPTY_PREVIEWS);
 
-  const [files, setFiles] = useState({
-    logo: null,
-    stamp: null,
-    signature: null,
-  });
-  const [previews, setPreviews] = useState({
-    logo: null,
-    stamp: null,
-    signature: null,
-  });
-
+  // ---- Auth helper ----
   async function getAuthToken() {
     if (typeof getToken !== "function") return null;
     try {
-      let t = await getToken({ template: "default" }).catch(() => null);
-      if (!t) t = await getToken({ forceRefresh: true }).catch(() => null);
-      return t;
+      return (
+        (await getToken({ template: "default" }).catch(() => null)) ||
+        (await getToken({ forceRefresh: true }).catch(() => null))
+      );
     } catch {
       return null;
     }
   }
 
-  // Fetch existing profile
+  // ---- Fetch existing profile ----
   useEffect(() => {
     let mounted = true;
 
@@ -135,52 +209,42 @@ export default function BusinessProfile() {
 
       try {
         const res = await fetch("/api/businessProfile/me", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
 
         if (res.status === 404) return;
-
-        if (!res.ok) {
-          console.error("Failed to fetch business profile:", res.status);
-          return;
-        }
+        if (!res.ok) { console.error("Failed to fetch business profile:", res.status); return; }
 
         const json = await res.json().catch(() => null);
         const data = json?.data;
         if (!data || !mounted) return;
 
         const serverMeta = {
-          businessName: data.businessName ?? "",
-          email: data.email ?? "",
-          address: data.address ?? "",
-          phone: data.phone ?? "",
-          location: data.location ?? "",
-          website: data.website ?? "",
-          terms: data.terms ?? "",
-          footer: data.footer ?? "",
-          // Payment fields
-          paymentMethod: data.paymentMethod ?? "",
-          paybill: data.paybill ?? "",
-          accountNumber: data.accountNumber ?? "",
-          accountName: data.accountName ?? "",
-          // Images and signature
-          logoUrl: data.logoUrl ?? null,
-          stampUrl: data.stampUrl ?? null,
-          signatureUrl: data.signatureUrl ?? null,
-          signatureOwnerName: data.signatureOwnerName ?? "",
+          businessName:        data.businessName        ?? "",
+          email:               data.email               ?? "",
+          address:             data.address             ?? "",
+          phone:               data.phone               ?? "",
+          location:            data.location            ?? "",
+          website:             data.website             ?? "",
+          terms:               data.terms               ?? "",
+          footer:              data.footer              ?? "",
+          paymentMethod:       data.paymentMethod       ?? "",
+          paybill:             data.paybill             ?? "",
+          accountNumber:       data.accountNumber       ?? "",
+          accountName:         data.accountName         ?? "",
+          logoUrl:             data.logoUrl             ?? null,
+          stampUrl:            data.stampUrl            ?? null,
+          signatureUrl:        data.signatureUrl        ?? null,
+          signatureOwnerName:  data.signatureOwnerName  ?? "",
           signatureOwnerTitle: data.signatureOwnerTitle ?? "",
-          defaultTaxPercent: data.defaultTaxPercent ?? 18,
+          defaultTaxPercent:   data.defaultTaxPercent   ?? 18,
         };
 
         setMeta(serverMeta);
         setPreviews((p) => ({
           ...p,
-          logo: resolveImageUrl(serverMeta.logoUrl),
-          stamp: resolveImageUrl(serverMeta.stampUrl),
+          logo:      resolveImageUrl(serverMeta.logoUrl),
+          stamp:     resolveImageUrl(serverMeta.stampUrl),
           signature: resolveImageUrl(serverMeta.signatureUrl),
         }));
       } catch (err) {
@@ -192,47 +256,42 @@ export default function BusinessProfile() {
 
     return () => {
       mounted = false;
+      // Revoke any blob URLs created during this mount
       Object.values(previews).forEach((u) => {
-        if (u && typeof u === "string" && u.startsWith("blob:")) {
-          URL.revokeObjectURL(u);
-        }
+        if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
       });
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, getToken]);
 
+  // ---- State helpers ----
   function updateMeta(field, value) {
     setMeta((m) => ({ ...m, [field]: value }));
   }
 
+  const urlFieldFor = (kind) =>
+    kind === "logo" ? "logoUrl" : kind === "stamp" ? "stampUrl" : "signatureUrl";
+
   function handleLocalFilePick(kind, file) {
     if (!file) return;
     const prev = previews[kind];
-    if (prev && typeof prev === "string" && prev.startsWith("blob:")) {
-      URL.revokeObjectURL(prev);
-    }
+    if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
 
     const objUrl = URL.createObjectURL(file);
     setFiles((f) => ({ ...f, [kind]: file }));
     setPreviews((p) => ({ ...p, [kind]: objUrl }));
-    updateMeta(
-      kind === "logo" ? "logoUrl" : kind === "stamp" ? "stampUrl" : "signatureUrl",
-      objUrl
-    );
+    updateMeta(urlFieldFor(kind), objUrl);
   }
 
   function removeLocalFile(kind) {
     const prev = previews[kind];
-    if (prev && typeof prev === "string" && prev.startsWith("blob:")) {
-      URL.revokeObjectURL(prev);
-    }
+    if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
     setFiles((f) => ({ ...f, [kind]: null }));
     setPreviews((p) => ({ ...p, [kind]: null }));
-    updateMeta(
-      kind === "logo" ? "logoUrl" : kind === "stamp" ? "stampUrl" : "signatureUrl",
-      null
-    );
+    updateMeta(urlFieldFor(kind), null);
   }
 
+  // ---- Save ----
   async function handleSave(e) {
     e?.preventDefault();
     setSaving(true);
@@ -240,48 +299,31 @@ export default function BusinessProfile() {
     try {
       const token = await getAuthToken();
       if (!token) {
-        Swal.fire({
-          icon: "error",
-          title: "Authentication Required",
-          text: "You must be signed in to save your business profile.",
-          toast: true,
-          position: "top-end",
-          showConfirmButton: false,
-          timer: 3000,
-          background: "#fef2f2",
-          color: "#991b1b",
-          iconColor: "#ef4444",
-          customClass: { popup: "swal-small-toast" },
-        });
+        toast("error", "Authentication Required", "You must be signed in to save your business profile.", { timer: 3000 });
         return;
       }
 
       const fd = new FormData();
-      fd.append("businessName", meta.businessName || "");
-      fd.append("email", meta.email || "");
-      fd.append("address", meta.address || "");
-      fd.append("phone", meta.phone || "");
-      fd.append("location", meta.location || "");
-      fd.append("website", meta.website || "");
-      fd.append("terms", meta.terms || "");
-      fd.append("footer", meta.footer || "");
-      // Payment fields
-      fd.append("paymentMethod", meta.paymentMethod || "");
-      fd.append("paybill", meta.paybill || "");
-      fd.append("accountNumber", meta.accountNumber || "");
-      fd.append("accountName", meta.accountName || "");
+      const textFields = [
+        "businessName", "email", "address", "phone", "location",
+        "website", "terms", "footer", "paymentMethod", "paybill",
+        "accountNumber", "accountName", "signatureOwnerName", "signatureOwnerTitle",
+      ];
+      textFields.forEach((f) => fd.append(f, meta[f] || ""));
       fd.append("defaultTaxPercent", String(meta.defaultTaxPercent ?? 18));
-      fd.append("signatureOwnerName", meta.signatureOwnerName || "");
-      fd.append("signatureOwnerTitle", meta.signatureOwnerTitle || "");
 
-      if (files.logo) fd.append("logoName", files.logo);
-      else if (meta.logoUrl && !meta.logoUrl.startsWith("blob:")) fd.append("logoUrl", meta.logoUrl);
+      // For each image kind: send file if newly picked, else preserve existing server URL
+      const fileFieldNames = { logo: "logoName", stamp: "stampName", signature: "signatureNameMeta" };
+      const urlFieldNames  = { logo: "logoUrl",  stamp: "stampUrl",  signature: "signatureUrl" };
 
-      if (files.stamp) fd.append("stampName", files.stamp);
-      else if (meta.stampUrl && !meta.stampUrl.startsWith("blob:")) fd.append("stampUrl", meta.stampUrl);
-
-      if (files.signature) fd.append("signatureNameMeta", files.signature);
-      else if (meta.signatureUrl && !meta.signatureUrl.startsWith("blob:")) fd.append("signatureUrl", meta.signatureUrl);
+      ["logo", "stamp", "signature"].forEach((kind) => {
+        const urlField = urlFieldFor(kind);
+        if (files[kind]) {
+          fd.append(fileFieldNames[kind], files[kind]);
+        } else if (meta[urlField] && !meta[urlField].startsWith("blob:")) {
+          fd.append(urlFieldNames[kind], meta[urlField]);
+        }
+      });
 
       const res = await fetch("/api/businessProfile/me", {
         method: "POST",
@@ -290,73 +332,33 @@ export default function BusinessProfile() {
       });
 
       const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const msg = json?.message || `Save failed (${res.status})`;
-        throw new Error(msg);
-      }
+      if (!res.ok) throw new Error(json?.message || `Save failed (${res.status})`);
 
       const saved = json?.data || json;
-      const merged = {
-        ...meta,
-        businessName: saved.businessName ?? meta.businessName,
-        email: saved.email ?? meta.email,
-        address: saved.address ?? meta.address,
-        phone: saved.phone ?? meta.phone,
-        location: saved.location ?? meta.location,
-        website: saved.website ?? meta.website,
-        terms: saved.terms ?? meta.terms,
-        footer: saved.footer ?? meta.footer,
-        paymentMethod: saved.paymentMethod ?? meta.paymentMethod,
-        paybill: saved.paybill ?? meta.paybill,
-        accountNumber: saved.accountNumber ?? meta.accountNumber,
-        accountName: saved.accountName ?? meta.accountName,
-        logoUrl: saved.logoUrl ?? meta.logoUrl,
-        stampUrl: saved.stampUrl ?? meta.stampUrl,
-        signatureUrl: saved.signatureUrl ?? meta.signatureUrl,
-        signatureOwnerName: saved.signatureOwnerName ?? meta.signatureOwnerName,
-        signatureOwnerTitle: saved.signatureOwnerTitle ?? meta.signatureOwnerTitle,
-        defaultTaxPercent: saved.defaultTaxPercent ?? meta.defaultTaxPercent,
-      };
 
-      setMeta(merged);
+      // Merge server response back into meta
+      setMeta((prev) => ({ ...prev, ...saved }));
 
-      if (saved.logoUrl) setPreviews((p) => ({ ...p, logo: resolveImageUrl(saved.logoUrl) }));
-      if (saved.stampUrl) setPreviews((p) => ({ ...p, stamp: resolveImageUrl(saved.stampUrl) }));
-      if (saved.signatureUrl) setPreviews((p) => ({ ...p, signature: resolveImageUrl(saved.signatureUrl) }));
+      // Update previews with resolved server URLs (strips any localhost origins)
+      setPreviews((p) => ({
+        logo:      saved.logoUrl      ? resolveImageUrl(saved.logoUrl)      : p.logo,
+        stamp:     saved.stampUrl     ? resolveImageUrl(saved.stampUrl)     : p.stamp,
+        signature: saved.signatureUrl ? resolveImageUrl(saved.signatureUrl) : p.signature,
+      }));
 
-      Swal.fire({
-        icon: "success",
-        title: "Saved!",
-        text: "Business profile saved successfully.",
-        toast: true,
-        position: "top-end",
-        showConfirmButton: false,
-        timer: 2000,
-        background: "#f0fdf4",
-        color: "#166534",
-        iconColor: "#22c55e",
-        customClass: { popup: "swal-small-toast" },
-      });
+      // Clear pending file references now that they're uploaded
+      setFiles(EMPTY_FILES);
+
+      toast("success", "Saved!", "Business profile saved successfully.");
     } catch (err) {
       console.error("Failed to save profile:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Save Failed",
-        text: err?.message || "Failed to save profile.",
-        toast: true,
-        position: "top-end",
-        showConfirmButton: false,
-        timer: 2500,
-        background: "#fef2f2",
-        color: "#991b1b",
-        iconColor: "#ef4444",
-        customClass: { popup: "swal-small-toast" },
-      });
+      toast("error", "Save Failed", err?.message || "Failed to save profile.");
     } finally {
       setSaving(false);
     }
   }
 
+  // ---- Clear / Reset ----
   async function handleClearProfile() {
     const result = await Swal.fire({
       title: "Clear Profile?",
@@ -372,27 +374,13 @@ export default function BusinessProfile() {
     if (!result.isConfirmed) return;
 
     Object.values(previews).forEach((u) => {
-      if (u && typeof u === "string" && u.startsWith("blob:")) {
-        URL.revokeObjectURL(u);
-      }
+      if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
     });
     setMeta({});
-    setFiles({ logo: null, stamp: null, signature: null });
-    setPreviews({ logo: null, stamp: null, signature: null });
+    setFiles(EMPTY_FILES);
+    setPreviews(EMPTY_PREVIEWS);
 
-    Swal.fire({
-      icon: "success",
-      title: "Cleared!",
-      text: "Profile form has been reset.",
-      toast: true,
-      position: "top-end",
-      showConfirmButton: false,
-      timer: 1500,
-      background: "#f0fdf4",
-      color: "#166534",
-      iconColor: "#22c55e",
-      customClass: { popup: "swal-small-toast" },
-    });
+    toast("success", "Cleared!", "Profile form has been reset.", { timer: 1500 });
   }
 
   // ======================== RENDER ========================
@@ -406,7 +394,7 @@ export default function BusinessProfile() {
       </div>
 
       <form onSubmit={handleSave}>
-        {/* Basic Information Card */}
+        {/* ── Business Information ── */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconPrimary}`}>
@@ -418,54 +406,26 @@ export default function BusinessProfile() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className={businessProfileStyles.label}>Business Name *</label>
-              <input
-                type="text"
-                value={meta.businessName || ""}
-                onChange={(e) => updateMeta("businessName", e.target.value)}
-                className={businessProfileStyles.input}
-                required
-              />
-            </div>
-            <div>
-              <label className={businessProfileStyles.label}>Email Address</label>
-              <input
-                type="email"
-                value={meta.email || ""}
-                onChange={(e) => updateMeta("email", e.target.value)}
-                className={businessProfileStyles.input}
-              />
-            </div>
-            <div>
-              <label className={businessProfileStyles.label}>Phone Number</label>
-              <input
-                type="tel"
-                value={meta.phone || ""}
-                onChange={(e) => updateMeta("phone", e.target.value)}
-                className={businessProfileStyles.input}
-              />
-            </div>
-            <div>
-              <label className={businessProfileStyles.label}>Location</label>
-              <input
-                type="text"
-                value={meta.location || ""}
-                onChange={(e) => updateMeta("location", e.target.value)}
-                className={businessProfileStyles.input}
-                placeholder="City, State, or Region"
-              />
-            </div>
-            <div>
-              <label className={businessProfileStyles.label}>Website</label>
-              <input
-                type="url"
-                value={meta.website || ""}
-                onChange={(e) => updateMeta("website", e.target.value)}
-                className={businessProfileStyles.input}
-                placeholder="https://example.com"
-              />
-            </div>
+            {[
+              { label: "Business Name *", field: "businessName", type: "text", required: true },
+              { label: "Email Address",   field: "email",        type: "email" },
+              { label: "Phone Number",    field: "phone",        type: "tel" },
+              { label: "Location",        field: "location",     type: "text", placeholder: "City, State, or Region" },
+              { label: "Website",         field: "website",      type: "url",  placeholder: "https://example.com" },
+            ].map(({ label, field, type, placeholder, required }) => (
+              <div key={field}>
+                <label className={businessProfileStyles.label}>{label}</label>
+                <input
+                  type={type}
+                  value={meta[field] || ""}
+                  onChange={(e) => updateMeta(field, e.target.value)}
+                  className={businessProfileStyles.input}
+                  placeholder={placeholder}
+                  required={required}
+                />
+              </div>
+            ))}
+
             <div>
               <label className={businessProfileStyles.label}>Default Tax (%)</label>
               <input
@@ -476,6 +436,7 @@ export default function BusinessProfile() {
                 className={businessProfileStyles.input}
               />
             </div>
+
             <div className="md:col-span-2">
               <label className={businessProfileStyles.label}>Address</label>
               <textarea
@@ -488,7 +449,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* Legal & Footer Card */}
+        {/* ── Legal & Footer ── */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
@@ -524,7 +485,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* Payment Settings Card (new) */}
+        {/* ── Payment Settings ── */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
@@ -537,50 +498,27 @@ export default function BusinessProfile() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className={businessProfileStyles.label}>Payment Method Name</label>
-              <input
-                type="text"
-                value={meta.paymentMethod || ""}
-                onChange={(e) => updateMeta("paymentMethod", e.target.value)}
-                className={businessProfileStyles.input}
-                placeholder="e.g., M-PESA, Bank Transfer, PayPal"
-              />
-            </div>
-            <div>
-              <label className={businessProfileStyles.label}>Paybill / Till Number</label>
-              <input
-                type="text"
-                value={meta.paybill || ""}
-                onChange={(e) => updateMeta("paybill", e.target.value)}
-                className={businessProfileStyles.input}
-                placeholder="e.g., 247247"
-              />
-            </div>
-            <div>
-              <label className={businessProfileStyles.label}>Account Number</label>
-              <input
-                type="text"
-                value={meta.accountNumber || ""}
-                onChange={(e) => updateMeta("accountNumber", e.target.value)}
-                className={businessProfileStyles.input}
-                placeholder="e.g., 0799501465"
-              />
-            </div>
-            <div>
-              <label className={businessProfileStyles.label}>Account Name</label>
-              <input
-                type="text"
-                value={meta.accountName || ""}
-                onChange={(e) => updateMeta("accountName", e.target.value)}
-                className={businessProfileStyles.input}
-                placeholder="e.g., NEX101"
-              />
-            </div>
+            {[
+              { label: "Payment Method Name", field: "paymentMethod",  placeholder: "e.g., M-PESA, Bank Transfer, PayPal" },
+              { label: "Paybill / Till Number", field: "paybill",      placeholder: "e.g., 247247" },
+              { label: "Account Number",        field: "accountNumber", placeholder: "e.g., 0799501465" },
+              { label: "Account Name",          field: "accountName",  placeholder: "e.g., NEX101" },
+            ].map(({ label, field, placeholder }) => (
+              <div key={field}>
+                <label className={businessProfileStyles.label}>{label}</label>
+                <input
+                  type="text"
+                  value={meta[field] || ""}
+                  onChange={(e) => updateMeta(field, e.target.value)}
+                  className={businessProfileStyles.input}
+                  placeholder={placeholder}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Logo Upload Card */}
+        {/* ── Company Logo ── */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconSecondary}`}>
@@ -588,46 +526,21 @@ export default function BusinessProfile() {
             </div>
             <h2 className={businessProfileStyles.cardTitle}>Company Logo</h2>
           </div>
-          <div className={businessProfileStyles.uploadArea}>
-            {previews.logo ? (
-              <div className={businessProfileStyles.imagePreviewContainer}>
-                <div className={businessProfileStyles.logoPreview}>
-                  <img src={previews.logo} alt="Logo preview" className="object-contain w-full h-full" />
-                </div>
-                <div className={businessProfileStyles.buttonGroup}>
-                  <label className={businessProfileStyles.changeButton}>
-                    <UploadIcon className="w-4 h-4" /> Change
-                    <input type="file" accept="image/*" onChange={(e) => handleLocalFilePick("logo", e.target.files?.[0])} className="hidden" />
-                  </label>
-                  <button type="button" onClick={() => removeLocalFile("logo")} className={businessProfileStyles.removeButton}>
-                    <DeleteIcon className="w-4 h-4" /> Remove
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="cursor-pointer block" onClick={() => document.getElementById("logo-file-input").click()}>
-                <div className={`${businessProfileStyles.imagePreviewContainer} ${businessProfileStyles.hoverScale}`}>
-                  <div className={businessProfileStyles.uploadIconContainer}>
-                    <UploadIcon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className={businessProfileStyles.uploadTextTitle}>Upload Logo</p>
-                    <p className={businessProfileStyles.uploadTextSubtitle}>PNG, JPG up to 5MB</p>
-                  </div>
-                </div>
-                <input
-                  id="logo-file-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleLocalFilePick("logo", e.target.files?.[0])}
-                  className="hidden"
-                />
-              </div>
-            )}
-          </div>
+
+          <UploadSlot
+            kind="logo"
+            preview={previews.logo}
+            inputId="logo-file-input"
+            label="Logo"
+            subtitle="PNG, JPG up to 5MB"
+            previewClass={businessProfileStyles.logoPreview}
+            icon={<UploadIcon className="w-6 h-6" />}
+            onPick={(f) => handleLocalFilePick("logo", f)}
+            onRemove={() => removeLocalFile("logo")}
+          />
         </div>
 
-        {/* Stamp & Signature Card */}
+        {/* ── Digital Assets (Stamp + Signature) ── */}
         <div className={businessProfileStyles.cardContainer}>
           <div className={businessProfileStyles.cardHeaderContainer}>
             <div className={`${businessProfileStyles.cardIconContainer} ${businessProfileStyles.iconTertiary}`}>
@@ -644,88 +557,38 @@ export default function BusinessProfile() {
             {/* Stamp */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">Digital Stamp</h3>
-              <div className={businessProfileStyles.uploadArea}>
-                {previews.stamp ? (
-                  <div className={businessProfileStyles.imagePreviewContainer}>
-                    <div className={businessProfileStyles.stampPreview}>
-                      <img src={previews.stamp} alt="Stamp preview" className="object-contain w-full h-full" />
-                    </div>
-                    <div className={businessProfileStyles.buttonGroup}>
-                      <label className={businessProfileStyles.changeButton}>
-                        <UploadIcon className="w-4 h-4" /> Change
-                        <input type="file" accept="image/*" onChange={(e) => handleLocalFilePick("stamp", e.target.files?.[0])} className="hidden" />
-                      </label>
-                      <button type="button" onClick={() => removeLocalFile("stamp")} className={businessProfileStyles.removeButton}>
-                        <DeleteIcon className="w-4 h-4" /> Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="cursor-pointer block" onClick={() => document.getElementById("stamp-file-input").click()}>
-                    <div className={`${businessProfileStyles.imagePreviewContainer} ${businessProfileStyles.hoverScale}`}>
-                      <div className={businessProfileStyles.uploadSmallIconContainer}>
-                        <ImageIcon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className={businessProfileStyles.uploadTextTitle}>Upload Stamp</p>
-                        <p className={businessProfileStyles.uploadTextSubtitle}>PNG with transparent background</p>
-                      </div>
-                    </div>
-                    <input
-                      id="stamp-file-input"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleLocalFilePick("stamp", e.target.files?.[0])}
-                      className="hidden"
-                    />
-                  </div>
-                )}
-              </div>
+              <UploadSlot
+                kind="stamp"
+                preview={previews.stamp}
+                inputId="stamp-file-input"
+                label="Stamp"
+                subtitle="PNG with transparent background"
+                previewClass={businessProfileStyles.stampPreview}
+                icon={<ImageIcon className="w-5 h-5" />}
+                onPick={(f) => handleLocalFilePick("stamp", f)}
+                onRemove={() => removeLocalFile("stamp")}
+              />
             </div>
 
             {/* Signature */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">Digital Signature</h3>
-              <div className={businessProfileStyles.uploadArea}>
-                {previews.signature ? (
-                  <div className={businessProfileStyles.imagePreviewContainer}>
-                    <div className={businessProfileStyles.signaturePreview}>
-                      <img src={previews.signature} alt="Signature preview" className="object-contain w-full h-full" />
-                    </div>
-                    <div className={businessProfileStyles.buttonGroup}>
-                      <label className={businessProfileStyles.changeButton}>
-                        <UploadIcon className="w-4 h-4" /> Change
-                        <input type="file" accept="image/*" onChange={(e) => handleLocalFilePick("signature", e.target.files?.[0])} className="hidden" />
-                      </label>
-                      <button type="button" onClick={() => removeLocalFile("signature")} className={businessProfileStyles.removeButton}>
-                        <DeleteIcon className="w-4 h-4" /> Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="cursor-pointer block" onClick={() => document.getElementById("signature-file-input").click()}>
-                    <div className={`${businessProfileStyles.imagePreviewContainer} ${businessProfileStyles.hoverScale}`}>
-                      <div className={businessProfileStyles.uploadSmallIconContainer}>
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                          <circle cx="12" cy="7" r="4" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className={businessProfileStyles.uploadTextTitle}>Upload Signature</p>
-                        <p className={businessProfileStyles.uploadTextSubtitle}>PNG with transparent background</p>
-                      </div>
-                    </div>
-                    <input
-                      id="signature-file-input"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleLocalFilePick("signature", e.target.files?.[0])}
-                      className="hidden"
-                    />
-                  </div>
-                )}
-              </div>
+              <UploadSlot
+                kind="signature"
+                preview={previews.signature}
+                inputId="signature-file-input"
+                label="Signature"
+                subtitle="PNG with transparent background"
+                previewClass={businessProfileStyles.signaturePreview}
+                icon={
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                }
+                onPick={(f) => handleLocalFilePick("signature", f)}
+                onRemove={() => removeLocalFile("signature")}
+              />
 
               <div className="mt-6 space-y-4">
                 <div>
@@ -753,7 +616,7 @@ export default function BusinessProfile() {
           </div>
         </div>
 
-        {/* Form Actions */}
+        {/* ── Form Actions ── */}
         <div className={businessProfileStyles.actionsContainer}>
           <button type="button" onClick={handleClearProfile} className={businessProfileStyles.resetButton}>
             <ResetIcon className="w-4 h-4" /> Reset
