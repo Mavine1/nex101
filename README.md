@@ -19,7 +19,6 @@ npm install
 # Start development server
 npm run dev
 ```
-
 The frontend runs on http://localhost:5173 (default Vite port).
 
 ## Scripts
