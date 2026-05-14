@@ -1,16 +1,51 @@
-# React + Vite
+# NEXInvoice Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend for the NEXInvoice application.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19
+- Vite
+- Tailwind CSS
+- React Router
+- Clerk Authentication
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install
 
-## Expanding the ESLint configuration
+# Start development server
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The frontend runs on http://localhost:5173 (default Vite port).
+
+## Scripts
+
+- `npm run dev` — Start development server with HMR
+- `npm run build` — Build for production
+- `npm run preview` — Preview production build
+- `npm run lint` — Run ESLint
+
+## Configuration
+
+Set the following in your environment or `.env.local`:
+
+```
+VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+VITE_API_URL=http://localhost:4000
+```
+
+## Routes
+
+| Path | Component | Description |
+|------|-----------|-------------|
+| `/` | Home | Landing page |
+| `/app` | AppShell | Protected app wrapper |
+| `/app/dashboard` | Dashboard | Main dashboard |
+| `/app/invoices` | Invoices | Invoice list |
+| `/app/invoices/new` | CreateInvoice | Create new invoice |
+| `/app/invoices/:id` | InvoicePreview | View invoice |
+| `/app/business` | BusinessProfile | Business settings |
